@@ -265,6 +265,9 @@ Obrigado!
       return message.trim();
     }
 
+    // --- Funções de Renderização da Página ---
+
+    // Esta função SÓ renderiza a caixa de endereço
     function renderShippingDetails() {
       const shippingContainer = document.getElementById('shipping-result-container');
       const savedShipping = JSON.parse(sessionStorage.getItem('shippingInfo'));
@@ -275,6 +278,7 @@ Obrigado!
       }
     }
 
+    // Esta função calcula o frete E MANDA RENDERIZAR TUDO
     async function calculateAndRenderShipping() {
       const shippingCepInput = document.getElementById('shipping-cep-input');
       const cep = shippingCepInput.value.replace(/\D/g, '');
@@ -302,8 +306,11 @@ Obrigado!
         const shippingInfo = { cep: cep, price: shippingPrice, address: data };
         sessionStorage.setItem('shippingInfo', JSON.stringify(shippingInfo));
         showToast(toastMessage, 'success');
-        cart.renderCartPage();
-        renderShippingDetails();
+
+        // Manda o cart.js renderizar itens E totais (incluindo o frete novo)
+        cart.renderCartPage(); //
+        // Manda renderizar a caixa de endereço
+        renderShippingDetails(); //
       } catch (error) {
         showToast('Erro ao buscar CEP. Tente novamente.', 'error');
       } finally {
@@ -311,6 +318,7 @@ Obrigado!
       }
     }
 
+    // --- Função de Checkout (sem alteração) ---
     async function proceedToCheckout() {
       showLoader();
       const userProfile = await authManager.fetchUserProfile();
@@ -332,35 +340,36 @@ Obrigado!
       hideLoader();
     }
 
-    // --- Lógica de carregamento da página (DOM) ---
+    // =======================================================
+    // --- LÓGICA PRINCIPAL (QUANDO A PÁGINA CARREGA) ---
+    // =======================================================
     document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Renderiza o estado inicial do carrinho e do frete
       cart.renderCartPage();
       renderShippingDetails();
 
-      // --- Referências aos Elementos ---
+      // --- Referências aos Elementos Estáticos ---
       const calcShippingBtn = document.getElementById('calc-shipping-btn');
       const shippingCepInput = document.getElementById('shipping-cep-input');
       const checkoutBtn = document.getElementById('checkout-btn');
       const modal = document.getElementById('confirm-address-modal');
       const confirmBtn = document.getElementById('modal-confirm-btn');
       const cancelBtn = document.getElementById('modal-cancel-btn');
+      const cartContent = document.getElementById('cart-content'); // Pai dos botões
 
-      // 🔥 PAI ESTÁTICO PARA DELEGAÇÃO DE EVENTOS
-      const cartContent = document.getElementById('cart-content');
-
-      // --- Preencher CEP ---
+      // --- Preencher CEP (se já tiver) ---
       const userProfileForCep = await authManager.fetchUserProfile();
       if (userProfileForCep && userProfileForCep.address_zipcode) {
         shippingCepInput.value = userProfileForCep.address_zipcode;
       }
 
-      // --- Listeners de Frete e Checkout ---
+      // --- Listeners de Frete e Checkout (sem alteração) ---
       calcShippingBtn.addEventListener('click', calculateAndRenderShipping);
       shippingCepInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') calculateAndRenderShipping();
       });
-
       checkoutBtn.addEventListener('click', async () => {
+        // ... (lógica do checkout não mudou) ...
         showLoader();
         const user = await authManager.getCurrentUser();
         if (!user) { window.location.href = 'login.html'; return; }
@@ -376,7 +385,7 @@ Obrigado!
         modal.classList.add('show');
       });
 
-      // --- Listeners do Modal ---
+      // --- Listeners do Modal (sem alteração) ---
       confirmBtn.addEventListener('click', proceedToCheckout);
       cancelBtn.addEventListener('click', () => {
         modal.classList.remove('show');
@@ -384,23 +393,37 @@ Obrigado!
       });
       modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
 
+
+      // ===============================================
+      // 🔥 CORREÇÃO FINAL DOS LISTENERS 🔥
+      // ===============================================
+
+      // NOVO: Listener para o evento 'cartUpdated'
+      // Quando o cart.js terminar de renderizar, ele dispara este evento.
+      // Nós "ouvimos" e chamamos a renderShippingDetails() para
+      // garantir que a caixa de endereço também seja atualizada.
+      window.addEventListener('cartUpdated', () => {
+        renderShippingDetails(); //
+      });
+
+      // Garante que os listeners de clique/mudança estão no pai estático
       if (cartContent) {
 
         // --- Listener para CLIQUES (Remover, Aumentar, Diminuir) ---
         cartContent.addEventListener('click', (e) => {
           const target = e.target;
-
-          // Encontra o elemento pai que tem o data-id
+          // Encontra o elemento PAI que tem o data-id
           const idElement = target.closest('[data-id]');
-          if (!idElement) return; // Sai se o clique não foi em nada com data-id
+          if (!idElement) return; // Sai se não clicou em nada com data-id
 
           const id = parseInt(idElement.dataset.id, 10);
-          if (isNaN(id)) return; // Sai se o ID não for um número
+          if (isNaN(id)) return;
 
           // Ação: Botão REMOVER
           if (target.closest('.cart-item-remove')) {
-            e.preventDefault(); // Previne qualquer comportamento padrão
-            cart.removeFromCart(id);
+            e.preventDefault();
+            // Apenas CHAMA a função. O cart.js vai salvar e renderizar.
+            cart.removeFromCart(id); //
             return;
           }
 
@@ -413,15 +436,13 @@ Obrigado!
             if (!input) return;
 
             let currentQty = parseInt(input.value, 10);
-            if (isNaN(currentQty)) currentQty = 0; // Garante que é um número
+            if (isNaN(currentQty)) currentQty = 0;
 
-            if (action === 'increase') {
-              currentQty++;
-            } else if (action === 'decrease') {
-              currentQty--;
-            }
+            if (action === 'increase') currentQty++;
+            else if (action === 'decrease') currentQty--;
 
-            cart.updateQuantity(id, currentQty);
+            // Apenas CHAMA a função. O cart.js vai salvar e renderizar.
+            cart.updateQuantity(id, currentQty); //
             return;
           }
         });
@@ -429,20 +450,18 @@ Obrigado!
         // --- Listener para MUDANÇA (Input manual de quantidade) ---
         cartContent.addEventListener('change', (e) => {
           const target = e.target;
-
-          // Verifica se a MUDANÇA foi no input de quantidade
           if (target.classList.contains('cart-item-quantity')) {
             const id = parseInt(target.dataset.id, 10);
             const quantity = parseInt(target.value, 10);
-
             if (isNaN(id) || isNaN(quantity)) return;
 
-            cart.updateQuantity(id, quantity);
+            // Apenas CHAMA a função. O cart.js vai salvar e renderizar.
+            cart.updateQuantity(id, quantity); //
           }
         });
       }
     });
   </script>
-</body>
 
+</body>
 </html>

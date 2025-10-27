@@ -1,3 +1,4 @@
+// Arquivo: geral/js/cart.js
 import { showToast, updateCartBadge } from './ui.js';
 
 class Cart {
@@ -31,9 +32,10 @@ class Cart {
         this.cart = this.cart.filter(item => item.id !== productId);
         showToast('Item removido do carrinho.');
         this.saveCart();
-        // If on cart page, re-render
+        
+        // Se estiver na página do carrinho, renderiza
         if (window.location.pathname.includes('cart.html')) {
-            this.renderCartPage();
+            this.renderCartPage(); //
         }
     }
 
@@ -41,14 +43,17 @@ class Cart {
         const item = this.cart.find(item => item.id === productId);
         if (item) {
             if (quantity <= 0) {
-                this.removeFromCart(productId);
+                // Se a quantidade for 0, chama o 'removeFromCart', que já salva e renderiza
+                this.removeFromCart(productId); //
             } else {
                 item.quantity = quantity;
-                this.saveCart();
+                this.saveCart(); //
+                
+                // 🔥 ADICIONADO: Força a renderização ao atualizar a quantidade
+                if (window.location.pathname.includes('cart.html')) {
+                    this.renderCartPage();
+                }
             }
-        }
-        if (window.location.pathname.includes('cart.html')) {
-            this.renderCartPage();
         }
     }
 
@@ -65,62 +70,55 @@ class Cart {
         this.saveCart();
     }
 
-renderCartPage() {
-    const itemsContainer = document.getElementById('cart-items');
-    const subtotalContainer = document.getElementById('cart-subtotal');
-    const shippingContainer = document.getElementById('cart-shipping');
-    const totalContainer = document.getElementById('cart-total');
+    renderCartPage() {
+        const itemsContainer = document.getElementById('cart-items');
+        const subtotalContainer = document.getElementById('cart-subtotal');
+        const shippingContainer = document.getElementById('cart-shipping');
+        const totalContainer = document.getElementById('cart-total');
 
-    if (!itemsContainer) return;
+        if (!itemsContainer) return;
 
-    // NOVO: Importa a função de renderizar endereço.
-    // Adicione esta linha no topo do seu script, fora da classe Cart:
-    // import { renderShippingDetails } from './path/to/cart.html/script.js'; 
-    // Como está no mesmo arquivo, vamos chamar diretamente.
-    if (typeof renderShippingDetails === 'function') {
-        renderShippingDetails();
-    }
+        const savedShipping = JSON.parse(sessionStorage.getItem('shippingInfo'));
+        const shippingCost = savedShipping ? savedShipping.price : 0;
 
+        const subtotal = this.getCartTotal();
+        const total = subtotal + shippingCost;
 
-    const savedShipping = JSON.parse(sessionStorage.getItem('shippingInfo'));
-    const shippingCost = savedShipping ? savedShipping.price : 0;
+        const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    const subtotal = this.getCartTotal();
-    const total = subtotal + shippingCost;
-
-    const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-    if (this.cart.length === 0) {
-        // Não esconde a confirmação se o pedido foi feito
-        if(document.getElementById('order-confirmation')?.style.display !== 'flex') {
-            itemsContainer.innerHTML = '<p>Seu carrinho está vazio.</p>';
-        }
-    } else {
-        itemsContainer.innerHTML = this.cart.map(item => `
-            <div class="cart-item">
-                <img src="${item.img || 'geral/img/logo/simbolo.png'}" alt="${item.name}" class="cart-item-image">
-                <div class="cart-item-details">
-                    <h4>${item.name}</h4>
-                    <p class="cart-item-price">${formatCurrency(item.price)}</p>
-                    <div class="cart-item-actions">
-                        <div class="quantity-wrapper">
-                            <button class="qty-btn" data-id="${item.id}" data-action="decrease">-</button>
-                            <input type="number" class="cart-item-quantity" value="${item.quantity}" min="1" data-id="${item.id}">
-                            <button class="qty-btn" data-id="${item.id}" data-action="increase">+</button>
+        if (this.cart.length === 0) {
+            if(document.getElementById('order-confirmation')?.style.display !== 'flex') {
+                itemsContainer.innerHTML = '<p>Seu carrinho está vazio.</p>';
+            }
+        } else {
+            itemsContainer.innerHTML = this.cart.map(item => `
+                <div class="cart-item">
+                    <img src="${item.img || 'geral/img/logo/simbolo.png'}" alt="${item.name}" class="cart-item-image">
+                    <div class="cart-item-details">
+                        <h4>${item.name}</h4>
+                        <p class="cart-item-price">${formatCurrency(item.price)}</p>
+                        <div class="cart-item-actions">
+                            <div class="quantity-wrapper">
+                                <button class="qty-btn" data-id="${item.id}" data-action="decrease">-</button>
+                                <input type="number" class="cart-item-quantity" value="${item.quantity}" min="1" data-id="${item.id}">
+                                <button class="qty-btn" data-id="${item.id}" data-action="increase">+</button>
+                            </div>
+                            <button class="cart-item-remove" data-id="${item.id}"><i class="ri-delete-bin-line"></i> Remover</button>
                         </div>
-                        <button class="cart-item-remove" data-id="${item.id}"><i class="ri-delete-bin-line"></i> Remover</button>
                     </div>
                 </div>
-            </div>
-        `).join('');
-    }
-    
-    // Atualiza os totais
-    if(subtotalContainer) subtotalContainer.textContent = formatCurrency(subtotal);
-    if(shippingContainer) shippingContainer.textContent = formatCurrency(shippingCost);
-    if(totalContainer) totalContainer.textContent = formatCurrency(total);
-}
+            `).join('');
+        }
+        
+        // Atualiza os totais
+        if(subtotalContainer) subtotalContainer.textContent = formatCurrency(subtotal);
+        if(shippingContainer) shippingContainer.textContent = formatCurrency(shippingCost);
+        if(totalContainer) totalContainer.textContent = formatCurrency(total);
 
+        // 🔥 ADICIONADO: Dispara um evento para "avisar" a página que o carrinho
+        // foi renderizado (para que o frete possa ser atualizado)
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+    }
 }
 
 export const cart = new Cart();
