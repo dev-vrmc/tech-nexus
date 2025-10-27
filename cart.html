@@ -211,7 +211,7 @@
   <script type="module" src="geral/js/supabase.js"></script>
   <script type="module" src="geral/js/auth.js"></script>
   <script type="module" src="geral/js/ui.js"></script>
-  <script type="module" src="geral/js/cart.js"></script>
+  <script src="geral/js/cart.js"></script>
   <script type="module" src="geral/js/products.js"></script>
   <script type="module" src="geral/js/main.js"></script>
   <script type="module">
@@ -266,8 +266,6 @@ Obrigado!
     }
 
     // --- Funções de Renderização da Página ---
-
-    // Esta função SÓ renderiza a caixa de endereço
     function renderShippingDetails() {
       const shippingContainer = document.getElementById('shipping-result-container');
       const savedShipping = JSON.parse(sessionStorage.getItem('shippingInfo'));
@@ -278,7 +276,6 @@ Obrigado!
       }
     }
 
-    // Esta função calcula o frete E MANDA RENDERIZAR TUDO
     async function calculateAndRenderShipping() {
       const shippingCepInput = document.getElementById('shipping-cep-input');
       const cep = shippingCepInput.value.replace(/\D/g, '');
@@ -306,11 +303,8 @@ Obrigado!
         const shippingInfo = { cep: cep, price: shippingPrice, address: data };
         sessionStorage.setItem('shippingInfo', JSON.stringify(shippingInfo));
         showToast(toastMessage, 'success');
-
-        // Manda o cart.js renderizar itens E totais (incluindo o frete novo)
-        cart.renderCartPage(); //
-        // Manda renderizar a caixa de endereço
-        renderShippingDetails(); //
+        cart.renderCartPage(); 
+        renderShippingDetails(); 
       } catch (error) {
         showToast('Erro ao buscar CEP. Tente novamente.', 'error');
       } finally {
@@ -318,7 +312,6 @@ Obrigado!
       }
     }
 
-    // --- Função de Checkout (sem alteração) ---
     async function proceedToCheckout() {
       showLoader();
       const userProfile = await authManager.fetchUserProfile();
@@ -369,7 +362,6 @@ Obrigado!
         if (e.key === 'Enter') calculateAndRenderShipping();
       });
       checkoutBtn.addEventListener('click', async () => {
-        // ... (lógica do checkout não mudou) ...
         showLoader();
         const user = await authManager.getCurrentUser();
         if (!user) { window.location.href = 'login.html'; return; }
@@ -395,43 +387,34 @@ Obrigado!
 
 
       // ===============================================
-      // 🔥 CORREÇÃO FINAL DOS LISTENERS 🔥
+      // 🔥 CORREÇÃO DOS LISTENERS 🔥
       // ===============================================
 
-      // NOVO: Listener para o evento 'cartUpdated'
-      // Quando o cart.js terminar de renderizar, ele dispara este evento.
-      // Nós "ouvimos" e chamamos a renderShippingDetails() para
-      // garantir que a caixa de endereço também seja atualizada.
       window.addEventListener('cartUpdated', () => {
-        renderShippingDetails(); //
+        renderShippingDetails(); 
       });
 
-      // Garante que os listeners de clique/mudança estão no pai estático
       if (cartContent) {
 
         // --- Listener para CLIQUES (Remover, Aumentar, Diminuir) ---
         cartContent.addEventListener('click', (e) => {
           const target = e.target;
           const idElement = target.closest('[data-id]');
+          if (!idElement) return; 
 
-          if (!idElement) return;
-
-          // 🔥 MUDANÇA 1: Trate o ID como string (remova parseInt)
+          // 🔥 CORREÇÃO: Removido o parseInt. O ID agora é uma STRING.
           const id = idElement.dataset.id;
-          // 🔥 MUDANÇA 2: Remova a verificação isNaN para o 'id'
-          // if (isNaN(id)) return; <-- REMOVIDO
-
+          
           // Ação: Botão REMOVER
           if (target.closest('.cart-item-remove')) {
             e.preventDefault();
-            cart.removeFromCart(id); // Passando 'id' como string
+            cart.removeFromCart(id); // Passa a STRING
             return;
           }
 
           // Ação: Botão de QUANTIDADE (+ ou -)
           if (target.closest('.qty-btn')) {
             e.preventDefault();
-            // ... (lógica para 'action' e 'input' não muda) ...
             const qtyBtn = target.closest('.qty-btn');
             const action = qtyBtn.dataset.action;
             const input = qtyBtn.closest('.quantity-wrapper').querySelector('.cart-item-quantity');
@@ -443,7 +426,7 @@ Obrigado!
             if (action === 'increase') currentQty++;
             else if (action === 'decrease') currentQty--;
 
-            cart.updateQuantity(id, currentQty); // Passando 'id' como string
+            cart.updateQuantity(id, currentQty); // Passa a STRING
             return;
           }
         });
@@ -452,15 +435,15 @@ Obrigado!
         cartContent.addEventListener('change', (e) => {
           const target = e.target;
           if (target.classList.contains('cart-item-quantity')) {
-
-            // 🔥 MUDANÇA 3: Trate o ID como string
+            
+            // 🔥 CORREÇÃO: Removido o parseInt do ID.
             const id = target.dataset.id;
             const quantity = parseInt(target.value, 10);
-
-            // 🔥 MUDANÇA 4: Remova a verificação isNaN do 'id'
+            
+            // A verificação de 'quantity' continua, mas a de 'id' é removida
             if (isNaN(quantity)) return;
 
-            cart.updateQuantity(id, quantity); // Passando 'id' como string
+            cart.updateQuantity(id, quantity); // Passa a STRING
           }
         });
       }
