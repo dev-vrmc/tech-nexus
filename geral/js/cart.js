@@ -28,28 +28,27 @@ class Cart {
         this.saveCart();
     }
 
-    removeFromCart(productId) {
-        this.cart = this.cart.filter(item => item.id !== productId);
+    removeFromCart(productId) { // productId agora é uma STRING
+        // 🔥 MUDANÇA: Compara os IDs como strings
+        this.cart = this.cart.filter(item => String(item.id) !== String(productId));
         showToast('Item removido do carrinho.');
         this.saveCart();
-        
-        // Se estiver na página do carrinho, renderiza
+
         if (window.location.pathname.includes('cart.html')) {
-            this.renderCartPage(); //
+            this.renderCartPage();
         }
     }
 
-    updateQuantity(productId, quantity) {
-        const item = this.cart.find(item => item.id === productId);
+    updateQuantity(productId, quantity) { // productId agora é uma STRING
+        // 🔥 MUDANÇA: Compara os IDs como strings
+        const item = this.cart.find(item => String(item.id) === String(productId));
         if (item) {
             if (quantity <= 0) {
-                // Se a quantidade for 0, chama o 'removeFromCart', que já salva e renderiza
-                this.removeFromCart(productId); //
+                this.removeFromCart(productId);
             } else {
                 item.quantity = quantity;
-                this.saveCart(); //
-                
-                // 🔥 ADICIONADO: Força a renderização ao atualizar a quantidade
+                this.saveCart();
+
                 if (window.location.pathname.includes('cart.html')) {
                     this.renderCartPage();
                 }
@@ -87,7 +86,7 @@ class Cart {
         const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         if (this.cart.length === 0) {
-            if(document.getElementById('order-confirmation')?.style.display !== 'flex') {
+            if (document.getElementById('order-confirmation')?.style.display !== 'flex') {
                 itemsContainer.innerHTML = '<p>Seu carrinho está vazio.</p>';
             }
         } else {
@@ -109,11 +108,11 @@ class Cart {
                 </div>
             `).join('');
         }
-        
+
         // Atualiza os totais
-        if(subtotalContainer) subtotalContainer.textContent = formatCurrency(subtotal);
-        if(shippingContainer) shippingContainer.textContent = formatCurrency(shippingCost);
-        if(totalContainer) totalContainer.textContent = formatCurrency(total);
+        if (subtotalContainer) subtotalContainer.textContent = formatCurrency(subtotal);
+        if (shippingContainer) shippingContainer.textContent = formatCurrency(shippingCost);
+        if (totalContainer) totalContainer.textContent = formatCurrency(total);
 
         // 🔥 ADICIONADO: Dispara um evento para "avisar" a página que o carrinho
         // foi renderizado (para que o frete possa ser atualizado)
