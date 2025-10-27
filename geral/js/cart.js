@@ -124,4 +124,7 @@ class Cart {
     }
 }
 
-export const cart = new Cart();
+if (!window.__cyberx_cart_instance) {
+  window.__cyberx_cart_instance = new Cart();
+}
+export const cart = window.__cyberx_cart_instance;

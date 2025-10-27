@@ -184,7 +184,7 @@ if (document.querySelector(".cart__main")) {
   );
 
   // Animação dos Itens do Carrinho
-  gsap.fromTo(".cart-item",
+  gsap.fromTo("#cart-items",
     { autoAlpha: 0, x: -40 }, // INICIAL
     { autoAlpha: 1, x: 0, stagger: 0.1, duration: 0.6, delay: 0.7, ease: "power2.out" } // FINAL
   );
