@@ -412,24 +412,26 @@ Obrigado!
         // --- Listener para CLIQUES (Remover, Aumentar, Diminuir) ---
         cartContent.addEventListener('click', (e) => {
           const target = e.target;
-          // Encontra o elemento PAI que tem o data-id
           const idElement = target.closest('[data-id]');
-          if (!idElement) return; // Sai se não clicou em nada com data-id
 
-          const id = parseInt(idElement.dataset.id, 10);
-          if (isNaN(id)) return;
+          if (!idElement) return;
+
+          // 🔥 MUDANÇA 1: Trate o ID como string (remova parseInt)
+          const id = idElement.dataset.id;
+          // 🔥 MUDANÇA 2: Remova a verificação isNaN para o 'id'
+          // if (isNaN(id)) return; <-- REMOVIDO
 
           // Ação: Botão REMOVER
           if (target.closest('.cart-item-remove')) {
             e.preventDefault();
-            // Apenas CHAMA a função. O cart.js vai salvar e renderizar.
-            cart.removeFromCart(id); //
+            cart.removeFromCart(id); // Passando 'id' como string
             return;
           }
 
           // Ação: Botão de QUANTIDADE (+ ou -)
           if (target.closest('.qty-btn')) {
             e.preventDefault();
+            // ... (lógica para 'action' e 'input' não muda) ...
             const qtyBtn = target.closest('.qty-btn');
             const action = qtyBtn.dataset.action;
             const input = qtyBtn.closest('.quantity-wrapper').querySelector('.cart-item-quantity');
@@ -441,8 +443,7 @@ Obrigado!
             if (action === 'increase') currentQty++;
             else if (action === 'decrease') currentQty--;
 
-            // Apenas CHAMA a função. O cart.js vai salvar e renderizar.
-            cart.updateQuantity(id, currentQty); //
+            cart.updateQuantity(id, currentQty); // Passando 'id' como string
             return;
           }
         });
@@ -451,12 +452,15 @@ Obrigado!
         cartContent.addEventListener('change', (e) => {
           const target = e.target;
           if (target.classList.contains('cart-item-quantity')) {
-            const id = parseInt(target.dataset.id, 10);
-            const quantity = parseInt(target.value, 10);
-            if (isNaN(id) || isNaN(quantity)) return;
 
-            // Apenas CHAMA a função. O cart.js vai salvar e renderizar.
-            cart.updateQuantity(id, quantity); //
+            // 🔥 MUDANÇA 3: Trate o ID como string
+            const id = target.dataset.id;
+            const quantity = parseInt(target.value, 10);
+
+            // 🔥 MUDANÇA 4: Remova a verificação isNaN do 'id'
+            if (isNaN(quantity)) return;
+
+            cart.updateQuantity(id, quantity); // Passando 'id' como string
           }
         });
       }
@@ -464,4 +468,5 @@ Obrigado!
   </script>
 
 </body>
+
 </html>
