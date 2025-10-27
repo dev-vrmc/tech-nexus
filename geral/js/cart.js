@@ -16,39 +16,46 @@ class Cart {
     }
 
     addToCart(product, quantity = 1) {
-        const existingItem = this.cart.find(item => item.id === product.id);
+        // Garante que o ID do produto seja uma string ANTES de ser salvo
+        const productId = String(product.id);
+        const existingItem = this.cart.find(item => String(item.id) === productId);
 
         if (existingItem) {
             existingItem.quantity += quantity;
         } else {
-            this.cart.push({ ...product, quantity });
+            // Salva o ID como string
+            this.cart.push({ ...product, id: productId, quantity });
         }
 
         showToast(`${product.name} adicionado ao carrinho!`);
         this.saveCart();
     }
 
-    removeFromCart(productId) { // productId agora é uma STRING
-        // 🔥 MUDANÇA: Compara os IDs como strings
-        this.cart = this.cart.filter(item => String(item.id) !== String(productId));
+    removeFromCart(productId) {
+        // 🔥 CORREÇÃO: Força a comparação de STRING para STRING
+        const productIdStr = String(productId);
+        this.cart = this.cart.filter(item => String(item.id) !== productIdStr);
+        
         showToast('Item removido do carrinho.');
         this.saveCart();
-
+        
         if (window.location.pathname.includes('cart.html')) {
-            this.renderCartPage();
+            this.renderCartPage(); 
         }
     }
 
-    updateQuantity(productId, quantity) { // productId agora é uma STRING
-        // 🔥 MUDANÇA: Compara os IDs como strings
-        const item = this.cart.find(item => String(item.id) === String(productId));
+    updateQuantity(productId, quantity) {
+        // 🔥 CORREÇÃO: Força a comparação de STRING para STRING
+        const productIdStr = String(productId);
+        const item = this.cart.find(item => String(item.id) === productIdStr);
+        
         if (item) {
             if (quantity <= 0) {
-                this.removeFromCart(productId);
+                this.removeFromCart(productIdStr); // Passa a string
             } else {
                 item.quantity = quantity;
-                this.saveCart();
-
+                this.saveCart(); 
+                
                 if (window.location.pathname.includes('cart.html')) {
                     this.renderCartPage();
                 }
@@ -86,7 +93,7 @@ class Cart {
         const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         if (this.cart.length === 0) {
-            if (document.getElementById('order-confirmation')?.style.display !== 'flex') {
+            if(document.getElementById('order-confirmation')?.style.display !== 'flex') {
                 itemsContainer.innerHTML = '<p>Seu carrinho está vazio.</p>';
             }
         } else {
@@ -108,14 +115,11 @@ class Cart {
                 </div>
             `).join('');
         }
+        
+        if(subtotalContainer) subtotalContainer.textContent = formatCurrency(subtotal);
+        if(shippingContainer) shippingContainer.textContent = formatCurrency(shippingCost);
+        if(totalContainer) totalContainer.textContent = formatCurrency(total);
 
-        // Atualiza os totais
-        if (subtotalContainer) subtotalContainer.textContent = formatCurrency(subtotal);
-        if (shippingContainer) shippingContainer.textContent = formatCurrency(shippingCost);
-        if (totalContainer) totalContainer.textContent = formatCurrency(total);
-
-        // 🔥 ADICIONADO: Dispara um evento para "avisar" a página que o carrinho
-        // foi renderizado (para que o frete possa ser atualizado)
         window.dispatchEvent(new CustomEvent('cartUpdated'));
     }
 }
