@@ -99,9 +99,15 @@ class Cart {
         } else {
             itemsContainer.innerHTML = this.cart.map(item => `
                 <div class="cart-item">
-                    <img src="${item.img || 'geral/img/logo/simbolo.png'}" alt="${item.name}" class="cart-item-image">
+                    
+                    <a href="item.html?id=${item.id}">
+                        <img src="${item.img || 'geral/img/logo/simbolo.png'}" alt="${item.name}" class="cart-item-image">
+                    </a>
+
                     <div class="cart-item-details">
-                        <h4>${item.name}</h4>
+                        
+                        <h4><a href="item.html?id=${item.id}" class="cart-item-link">${item.name}</a></h4>
+                        
                         <p class="cart-item-price">${formatCurrency(item.price)}</p>
                         <div class="cart-item-actions">
                             <div class="quantity-wrapper">

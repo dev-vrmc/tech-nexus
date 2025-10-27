@@ -167,7 +167,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p>Total: ${Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     <ul>
                     ${order.order_items.map(item => `
-                        <li>• ${item.quantity}x ${item.products?.name || 'Produto Removido'}</li>
+                        
+                        <li>• ${item.quantity}x <a href="item.html?id=${item.products?.id}" class="order-history-link">${item.products?.name || 'Produto Removido'}</a></li>
+
                     `).join('')}
                     </ul>
                 </div>

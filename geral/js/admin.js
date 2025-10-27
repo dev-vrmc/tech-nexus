@@ -230,7 +230,8 @@ async function loadProducts() {
         if (!container) return;
         container.innerHTML = products.map(p => `
             <div class="admin-product-item">
-                <span>${p.name} (Estoque: ${p.stock})</span>
+                <span><a href="item.html?id=${p.id}" target="_blank" class="admin-link">${p.name}</a> (Estoque: ${p.stock})</span>
+                
                 <div>
                     <button class="edit-btn" data-id="${p.id}">Editar</button>
                     <button class="delete-btn" data-id="${p.id}">Excluir</button>
@@ -315,8 +316,8 @@ async function loadOrders() {
                     address_state,
                     address_zipcode
                 ),
-                order_items ( quantity, unit_price, products!inner(name) )
-            `)
+                order_items ( quantity, unit_price, products!inner(id, name) )
+            `) // <-- MODIFICADO: Buscando 'id' e 'name' de products
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -359,7 +360,7 @@ async function loadOrders() {
                     <ul>
                     ${order.order_items.map(item => `
                         <li>
-                            -- ${item.quantity}x ${item.products?.name || 'Produto Removido'} — 
+                            -- ${item.quantity}x <a href="item.html?id=${item.products?.id}" target="_blank" class="admin-link">${item.products?.name || 'Produto Removido'}</a> — 
                             ${Number(item.unit_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </li>
                     `).join('')}
@@ -460,8 +461,8 @@ async function loadReviews() {
                 rating,
                 image_urls,
                 profile:profiles(full_name, avatar_url),
-                product:products(name)
-            `)
+                product:products(id, name)
+            `) // <-- MODIFICADO: Buscando 'id' e 'name' de products
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -474,7 +475,14 @@ async function loadReviews() {
         container.innerHTML = reviews.map(review => {
             const avatarSrc = review.profile?.avatar_url || 'geral/img/logo/simbolo.png';
             const authorName = review.profile?.full_name || 'Usuário Anônimo';
+            
             const productName = review.product?.name || 'Produto Removido';
+            const productId = review.product?.id;
+
+            // MODIFICADO: Adiciona link para o item e âncora para as reviews
+            const productHTML = productId
+                ? `<a href="item.html?id=${productId}#reviews-list" target="_blank" class="admin-link">${productName}</a>`
+                : productName;
 
             // Gera HTML para as imagens (se houver)
             const imagesHTML = (review.image_urls || []).map(url =>
@@ -487,7 +495,7 @@ async function loadReviews() {
                     <img src="${avatarSrc}" alt="Avatar de ${authorName}" class="review-avatar">
                     <div class="admin-review-info">
                         <span class="review-author-name">${authorName}</span>
-                        <span class="review-product-name">Produto: <strong>${productName}</strong></span>
+                        <span class="review-product-name">Produto: <strong>${productHTML}</strong></span>
                         <div class="stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
                     </div>
                 </header>
