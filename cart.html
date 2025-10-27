@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="geral/css/media-query.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-  <title>Carrinho • Tech Nexus</title>
+  <title>Carrinho • Cyber X</title>
 </head>
 
 <body>
@@ -152,9 +152,9 @@
     <div class="footer__container">
       <!-- Logo + redes -->
       <div class="footer__column footer__logo">
-        <a href="index.html"><img src="geral/img/logo/logo branca.png" alt="Tech Nexus"
+        <a href="index.html"><img src="geral/img/logo/logo branca.png" alt="CyberX"
             class="footer__logo-img logo__light"></a>
-        <a href="index.html"><img src="geral/img/logo/logo.png" alt="Tech Nexus" class="footer__logo-img logo__dark"></a>
+        <a href="index.html"><img src="geral/img/logo/logo.png" alt="CyberX" class="footer__logo-img logo__dark"></a>
         <div class="footer__socials">
           <a href="#"><i class="ri-facebook-fill"></i></a>
           <a href="#"><i class="ri-instagram-fill"></i></a>
@@ -183,7 +183,7 @@
       <div class="footer__column">
         <h3>ATENDIMENTO</h3>
         <p><i class="ri-phone-fill"></i> (61) XXXXX-XXXX</p>
-        <p><i class="ri-mail-fill"></i> technexus123@gmail.com</p>
+        <p><i class="ri-mail-fill"></i> cyberx123@gmail.com</p>
 
         <h3>FORMAS DE PAGAMENTO</h3>
         <div class="footer__payments">
@@ -220,33 +220,31 @@
     import { orderManager } from './geral/js/order.js';
     import { showToast, showLoader, hideLoader } from './geral/js/ui.js';
 
-    // NOVO: Função que calcula o frete com base no estado (UF)
+    // --- Funções Auxiliares (sem alteração) ---
     function getShippingCostByState(state) {
       const regioes = {
-        centroOeste: { states: ['DF', 'GO', 'MT', 'MS'], price: 18.50 },
-        sudeste: { states: ['SP', 'RJ', 'ES', 'MG'], price: 24.90 },
-        sul: { states: ['PR', 'SC', 'RS'], price: 28.00 },
-        nordeste: { states: ['BA', 'SE', 'AL', 'PE', 'PB', 'RN', 'CE', 'PI', 'MA'], price: 35.70 },
-        norte: { states: ['AM', 'RR', 'AP', 'PA', 'TO', 'RO', 'AC'], price: 45.90 }
+        centroOeste: { states: ['DF', 'GO', 'MT', 'MS'], price: 24.45 },
+        sudeste: { states: ['SP', 'RJ', 'ES', 'MG'], price: 36.50 },
+        sul: { states: ['PR', 'SC', 'RS'], price: 42.13 },
+        nordeste: { states: ['BA', 'SE', 'AL', 'PE', 'PB', 'RN', 'CE', 'PI', 'MA'], price: 61.20 },
+        norte: { states: ['AM', 'RR', 'AP', 'PA', 'TO', 'RO', 'AC'], price: 159.75 }
       };
-
       for (const regiao in regioes) {
         if (regioes[regiao].states.includes(state.toUpperCase())) {
           return regioes[regiao].price;
         }
       }
-      return 30.00; // Valor padrão caso o estado não seja encontrado
+      return 30.00;
     }
 
     function generateWhatsAppMessage(order, cartItems, userProfile, shippingInfo) {
-      // ... esta função continua exatamente igual, sem alterações ...
       const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
       let itemsList = cartItems.map(item => `   - ${item.quantity}x ${item.name} (${formatCurrency(item.price * item.quantity)})`).join('\n');
       const subtotal = cart.getCartTotal();
       const shippingCost = shippingInfo ? shippingInfo.price : 0;
       const deliveryAddress = shippingInfo.address ? `${shippingInfo.address.logradouro}, ${shippingInfo.address.bairro} - ${shippingInfo.address.localidade}/${shippingInfo.address.uf}` : 'Endereço de entrega a confirmar.';
       const message = `
-*Resumo do meu Pedido na Tech Nexus 🚀
+*Resumo do meu Pedido na Cyber X* 🚀
 
 Olá! Este é um resumo do meu pedido *Nº ${order.id}*.
 
@@ -263,26 +261,83 @@ ${itemsList}
 ${deliveryAddress}
 
 Obrigado!
-        `;
+    `;
       return message.trim();
     }
 
     function renderShippingDetails() {
-      // ... esta função continua exatamente igual, sem alterações ...
       const shippingContainer = document.getElementById('shipping-result-container');
       const savedShipping = JSON.parse(sessionStorage.getItem('shippingInfo'));
       if (savedShipping && savedShipping.address && shippingContainer) {
         shippingContainer.innerHTML = `<div class="shipping-details"><p><strong>Endereço de Entrega (CEP: ${savedShipping.cep}):</strong></p><p>${savedShipping.address.logradouro}, ${savedShipping.address.bairro} - ${savedShipping.address.localidade}/${savedShipping.address.uf}</p></div>`;
-      } else {
+      } else if (shippingContainer) {
         shippingContainer.innerHTML = '';
       }
     }
 
+    async function calculateAndRenderShipping() {
+      const shippingCepInput = document.getElementById('shipping-cep-input');
+      const cep = shippingCepInput.value.replace(/\D/g, '');
+      if (cep.length !== 8) {
+        showToast('Por favor, insira um CEP válido.', 'error');
+        return;
+      }
+      showLoader();
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        if (data.erro) {
+          showToast('CEP não encontrado.', 'error');
+          sessionStorage.removeItem('shippingInfo');
+          return;
+        }
+        const freeShippingThreshold = 2000.00;
+        const subtotal = cart.getCartTotal();
+        let shippingPrice = getShippingCostByState(data.uf);
+        let toastMessage = `Frete calculado com sucesso!`;
+        if (subtotal >= freeShippingThreshold) {
+          shippingPrice = 0;
+          toastMessage = 'Parabéns! Você ganhou frete grátis!';
+        }
+        const shippingInfo = { cep: cep, price: shippingPrice, address: data };
+        sessionStorage.setItem('shippingInfo', JSON.stringify(shippingInfo));
+        showToast(toastMessage, 'success');
+        cart.renderCartPage();
+        renderShippingDetails();
+      } catch (error) {
+        showToast('Erro ao buscar CEP. Tente novamente.', 'error');
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function proceedToCheckout() {
+      showLoader();
+      const userProfile = await authManager.fetchUserProfile();
+      const shippingInfo = JSON.parse(sessionStorage.getItem('shippingInfo'));
+      const newOrder = await orderManager.createOrder(cart.getCart());
+      if (newOrder && newOrder.id) {
+        const message = generateWhatsAppMessage(newOrder, cart.getCart(), userProfile, shippingInfo);
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        document.getElementById('whatsapp-share-btn').href = whatsappUrl;
+        document.getElementById('cart-content').style.display = 'none';
+        document.getElementById('order-confirmation').style.display = 'flex';
+        showToast('Pedido registrado com sucesso!', 'success');
+        cart.clearCart();
+        sessionStorage.removeItem('shippingInfo');
+      } else {
+        showToast('Erro ao finalizar a compra. Tente novamente.', 'error');
+      }
+      document.getElementById('confirm-address-modal').classList.remove('show');
+      hideLoader();
+    }
+
+    // --- Lógica de carregamento da página (DOM) ---
     document.addEventListener('DOMContentLoaded', async () => {
       cart.renderCartPage();
       renderShippingDetails();
 
-      const cartItemsContainer = document.getElementById('cart-items');
+      // --- Referências aos Elementos ---
       const calcShippingBtn = document.getElementById('calc-shipping-btn');
       const shippingCepInput = document.getElementById('shipping-cep-input');
       const checkoutBtn = document.getElementById('checkout-btn');
@@ -290,92 +345,21 @@ Obrigado!
       const confirmBtn = document.getElementById('modal-confirm-btn');
       const cancelBtn = document.getElementById('modal-cancel-btn');
 
+      // 🔥 PAI ESTÁTICO PARA DELEGAÇÃO DE EVENTOS
+      const cartContent = document.getElementById('cart-content');
+
+      // --- Preencher CEP ---
       const userProfileForCep = await authManager.fetchUserProfile();
       if (userProfileForCep && userProfileForCep.address_zipcode) {
         shippingCepInput.value = userProfileForCep.address_zipcode;
       }
 
-      // --- Lógica de add/remover do carrinho (sem alterações) ---
-      cartItemsContainer.addEventListener('click', (e) => {
-        const target = e.target;
-        if (!target.dataset.id && !target.closest('[data-id]')) return;
-        const id = parseInt(target.dataset.id || target.closest('[data-id]').dataset.id, 10);
-        if (target.classList.contains('cart-item-remove') || target.closest('.cart-item-remove')) {
-          cart.removeFromCart(id);
-        } else if (target.classList.contains('qty-btn')) {
-          const action = target.dataset.action;
-          const input = target.parentElement.querySelector('.cart-item-quantity');
-          let currentQty = parseInt(input.value, 10);
-          if (action === 'increase') currentQty++;
-          else if (action === 'decrease') currentQty--;
-          cart.updateQuantity(id, currentQty);
-        }
-      });
-      cartItemsContainer.addEventListener('change', (e) => {
-        if (e.target.classList.contains('cart-item-quantity')) {
-          const id = parseInt(e.target.dataset.id, 10);
-          const quantity = parseInt(e.target.value, 10);
-          cart.updateQuantity(id, quantity);
-        }
-      });
-      // --- Fim da Lógica de add/remover ---
-
-
-      // --- ALTERADO: Lógica de Frete com preço por região e frete grátis ---
-      async function calculateAndRenderShipping() {
-        const cep = shippingCepInput.value.replace(/\D/g, '');
-        if (cep.length !== 8) {
-          showToast('Por favor, insira um CEP válido.', 'error');
-          return;
-        }
-
-        showLoader();
-        try {
-          const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-          const data = await response.json();
-
-          if (data.erro) {
-            showToast('CEP não encontrado.', 'error');
-            sessionStorage.removeItem('shippingInfo');
-            return;
-          }
-
-          // --- LÓGICA DE PREÇO ASSERTIVO ---
-          const freeShippingThreshold = 1500.00; // Valor para frete grátis
-          const subtotal = cart.getCartTotal();
-          let shippingPrice = getShippingCostByState(data.uf); // Calcula o preço pela região
-          let toastMessage = `Frete calculado com sucesso!`;
-
-          // Verifica se o cliente ganhou frete grátis
-          if (subtotal >= freeShippingThreshold) {
-            shippingPrice = 0;
-            toastMessage = 'Parabéns! Você ganhou frete grátis!';
-          }
-          // --- FIM DA LÓGICA ---
-
-          const shippingInfo = {
-            cep: cep,
-            price: shippingPrice,
-            address: data
-          };
-
-          sessionStorage.setItem('shippingInfo', JSON.stringify(shippingInfo));
-          showToast(toastMessage, 'success');
-          cart.renderCartPage();
-          renderShippingDetails();
-
-        } catch (error) {
-          showToast('Erro ao buscar CEP. Tente novamente.', 'error');
-        } finally {
-          hideLoader();
-        }
-      }
+      // --- Listeners de Frete e Checkout ---
       calcShippingBtn.addEventListener('click', calculateAndRenderShipping);
       shippingCepInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') calculateAndRenderShipping();
       });
 
-      // --- Lógica do modal (sem alterações) ---
       checkoutBtn.addEventListener('click', async () => {
         showLoader();
         const user = await authManager.getCurrentUser();
@@ -391,36 +375,72 @@ Obrigado!
         hideLoader();
         modal.classList.add('show');
       });
-      // --- Fim da lógica do modal ---
 
-      async function proceedToCheckout() {
-        // ... esta função continua exatamente igual, sem alterações ...
-        showLoader();
-        const userProfile = await authManager.fetchUserProfile();
-        const shippingInfo = JSON.parse(sessionStorage.getItem('shippingInfo'));
-        const newOrder = await orderManager.createOrder(cart.getCart());
-        if (newOrder && newOrder.id) {
-          const message = generateWhatsAppMessage(newOrder, cart.getCart(), userProfile, shippingInfo);
-          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-          document.getElementById('whatsapp-share-btn').href = whatsappUrl;
-          document.getElementById('cart-content').style.display = 'none';
-          document.getElementById('order-confirmation').style.display = 'flex';
-          showToast('Pedido registrado com sucesso!', 'success');
-          cart.clearCart();
-          sessionStorage.removeItem('shippingInfo');
-        } else {
-          showToast('Erro ao finalizar a compra. Tente novamente.', 'error');
-        }
-        modal.classList.remove('show');
-        hideLoader();
-      }
-
+      // --- Listeners do Modal ---
       confirmBtn.addEventListener('click', proceedToCheckout);
       cancelBtn.addEventListener('click', () => {
         modal.classList.remove('show');
         window.location.href = 'account.html';
       });
       modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
+
+      if (cartContent) {
+
+        // --- Listener para CLIQUES (Remover, Aumentar, Diminuir) ---
+        cartContent.addEventListener('click', (e) => {
+          const target = e.target;
+
+          // Encontra o elemento pai que tem o data-id
+          const idElement = target.closest('[data-id]');
+          if (!idElement) return; // Sai se o clique não foi em nada com data-id
+
+          const id = parseInt(idElement.dataset.id, 10);
+          if (isNaN(id)) return; // Sai se o ID não for um número
+
+          // Ação: Botão REMOVER
+          if (target.closest('.cart-item-remove')) {
+            e.preventDefault(); // Previne qualquer comportamento padrão
+            cart.removeFromCart(id);
+            return;
+          }
+
+          // Ação: Botão de QUANTIDADE (+ ou -)
+          if (target.closest('.qty-btn')) {
+            e.preventDefault();
+            const qtyBtn = target.closest('.qty-btn');
+            const action = qtyBtn.dataset.action;
+            const input = qtyBtn.closest('.quantity-wrapper').querySelector('.cart-item-quantity');
+            if (!input) return;
+
+            let currentQty = parseInt(input.value, 10);
+            if (isNaN(currentQty)) currentQty = 0; // Garante que é um número
+
+            if (action === 'increase') {
+              currentQty++;
+            } else if (action === 'decrease') {
+              currentQty--;
+            }
+
+            cart.updateQuantity(id, currentQty);
+            return;
+          }
+        });
+
+        // --- Listener para MUDANÇA (Input manual de quantidade) ---
+        cartContent.addEventListener('change', (e) => {
+          const target = e.target;
+
+          // Verifica se a MUDANÇA foi no input de quantidade
+          if (target.classList.contains('cart-item-quantity')) {
+            const id = parseInt(target.dataset.id, 10);
+            const quantity = parseInt(target.value, 10);
+
+            if (isNaN(id) || isNaN(quantity)) return;
+
+            cart.updateQuantity(id, quantity);
+          }
+        });
+      }
     });
   </script>
 </body>
