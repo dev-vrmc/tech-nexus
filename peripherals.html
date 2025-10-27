@@ -134,7 +134,8 @@
       <div class="footer__column footer__logo">
         <a href="index.html"><img src="geral/img/logo/logo branca.png" alt="Tech Nexus"
             class="footer__logo-img logo__light"></a>
-        <a href="index.html"><img src="geral/img/logo/logo.png" alt="Tech Nexus" class="footer__logo-img logo__dark"></a>
+        <a href="index.html"><img src="geral/img/logo/logo.png" alt="Tech Nexus"
+            class="footer__logo-img logo__dark"></a>
         <div class="footer__socials">
           <a href="#"><i class="ri-facebook-fill"></i></a>
           <a href="#"><i class="ri-instagram-fill"></i></a>
@@ -212,20 +213,22 @@
     import { renderProducts } from './geral/js/ui.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      const container = document.getElementById('products-container');
+      const container = document.getElementById('products-list-container');
 
       const peripheralsProducts = await productManager.getProducts({ categorySlug: 'peripherals' });
-      renderProducts(peripheralsProducts, 'products-container');
+      renderProducts(peripheralsProducts, 'products-list-container');
 
-      // ADICIONADO: Lógica de clique para os cards
-      container.addEventListener('click', (e) => {
-        // Procura pelo elemento .product-card mais próximo de onde o usuário clicou
-        const card = e.target.closest('.product-card');
-        if (card && card.dataset.id) {
-          const productId = card.dataset.id;
-          window.location.href = `item.html?id=${productId}`;
-        }
-      });
+      if (container) {
+        container.addEventListener('click', (e) => {
+          const card = e.target.closest('.product-card');
+          if (card && card.dataset.id) {
+            const productId = card.dataset.id;
+            window.location.href = `item.html?id=${productId}`;
+          }
+        });
+      } else {
+        console.error('Container de produtos não encontrado!');
+      }
     });
   </script>
   <script>

@@ -213,20 +213,22 @@
     import { renderProducts } from './geral/js/ui.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      const container = document.getElementById('products-container');
+      const container = document.getElementById('products-list-container');
 
       const computersProducts = await productManager.getProducts({ categorySlug: 'computers' });
-      renderProducts(computersProducts, 'products-container');
+      renderProducts(computersProducts, 'products-list-container');
 
-      // ADICIONADO: Lógica de clique para os cards
-      container.addEventListener('click', (e) => {
-        // Procura pelo elemento .product-card mais próximo de onde o usuário clicou
-        const card = e.target.closest('.product-card');
-        if (card && card.dataset.id) {
-          const productId = card.dataset.id;
-          window.location.href = `item.html?id=${productId}`;
-        }
-      });
+      if (container) {
+        container.addEventListener('click', (e) => {
+          const card = e.target.closest('.product-card');
+          if (card && card.dataset.id) {
+            const productId = card.dataset.id;
+            window.location.href = `item.html?id=${productId}`;
+          }
+        });
+      } else {
+        console.error('Container de produtos não encontrado!');
+      }
     });
   </script>
   <script>
