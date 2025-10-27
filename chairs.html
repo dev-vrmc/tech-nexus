@@ -212,6 +212,7 @@
     import { renderProducts } from './geral/js/ui.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
+      y
       const container = document.getElementById('products-list-container');
 
       const chairsProducts = await productManager.getProducts({ categorySlug: 'chairs' });
@@ -233,17 +234,28 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Pega o nome do arquivo da página atual (ex: "hardware.html")
-      const currentPagePath = window.location.pathname.split('/').pop();
+      const currentLocationPath = window.location.pathname;
       const navItems = document.querySelectorAll('.nav_container .nav__item');
+
+      const normalizePath = (path) => {
+        let normalized = path;
+        if (normalized.endsWith('.html')) {
+          normalized = normalized.slice(0, -5);
+        }
+        if (normalized.endsWith('/') && normalized.length > 1) {
+          normalized = normalized.slice(0, -1);
+        }
+        return normalized;
+      };
+
+      const normalizedCurrentPath = normalizePath(currentLocationPath);
 
       navItems.forEach(item => {
         const link = item.querySelector('.nav__link');
         if (link) {
-          const linkPath = link.getAttribute('href');
+          const normalizedLinkPath = normalizePath(link.pathname);
 
-          // Compara o href do link com o nome da página atual
-          if (linkPath === currentPagePath) {
+          if (normalizedLinkPath === normalizedCurrentPath) {
             item.classList.add('active-link');
           }
         }
