@@ -3370,7 +3370,6 @@ label {
    NOVO: CONTAINER DE ENDEREÇO DO FRETE
    =================== */
 #shipping-result-container {
-    display: none;
     margin-top: 1rem;
     padding: 0.8rem;
     background-color: var(--body-color);
@@ -3379,6 +3378,10 @@ label {
     font-size: var(--small-font-size);
     text-align: left;
     line-height: 1.5;
+}
+
+#shipping-result-container:empty {
+    display: none;
 }
 
 .shipping-details p {
