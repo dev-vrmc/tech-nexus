@@ -242,18 +242,10 @@ main {
 
 .nav_container:hover .nav__item.active-link .nav__link,
 .nav_container:hover .nav__item.active-link .icon__nav {
-    color: var(--title-color);
+    color: var(--text-color);
 }
 .nav_container:hover .nav__item.active-link .icon__nav {
     transform: rotate(0deg);
-}
-
-.nav_container .nav__item.active-link:hover .nav__link,
-.nav_container .nav__item.active-link:hover .icon__nav {
-    color: var(--first-color-alt);
-}
-.nav_container .nav__item.active-link:hover .icon__nav {
-    transform: rotate(-180deg);
 }
 
 .nav__link {
@@ -3378,6 +3370,7 @@ label {
    NOVO: CONTAINER DE ENDEREÇO DO FRETE
    =================== */
 #shipping-result-container {
+    display: none;
     margin-top: 1rem;
     padding: 0.8rem;
     background-color: var(--body-color);
