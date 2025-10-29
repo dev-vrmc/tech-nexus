@@ -7,12 +7,67 @@ import { renderProducts, showToast, showLoader, hideLoader } from './ui.js';
 import { authManager } from './auth.js';
 import { wishlistManager } from './wishlist.js';
 
-// NOVA FUNÇÃO para renderizar as estrelas e a nota
+// ===============================================
+// FUNÇÃO DE MODAL DE CONFIRMAÇÃO (Sim/Não)
+// Mantida, pois é usada para DELETAR a review
+// ===============================================
+/**
+ * Exibe um modal de confirmação genérico para a página de item.
+ * @param {string} message A mensagem a ser exibida.
+ * @param {function} onConfirmCallback A função a ser executada se o usuário confirmar.
+ */
+function showItemConfirmModal(message, onConfirmCallback) {
+    const modal = document.getElementById('item-confirm-modal');
+    const messageEl = document.getElementById('item-confirm-message');
+    const confirmBtn = document.getElementById('item-confirm-yes');
+    const cancelBtn = document.getElementById('item-confirm-cancel');
+
+    if (!modal || !messageEl || !confirmBtn || !cancelBtn) {
+        console.error('Elementos do modal de confirmação não encontrados. Usando confirm() nativo.');
+        if (confirm(message)) { onConfirmCallback(); }
+        return;
+    }
+    
+    // Atualiza o texto do botão para ser mais claro
+    const deleteText = message.includes('excluir') ? 'Sim, Excluir' : 'Confirmar';
+    confirmBtn.textContent = deleteText;
+
+    messageEl.textContent = message;
+
+    // Clona os botões para limpar listeners de cliques antigos
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    const hideModal = () => modal.classList.remove('show');
+
+    newConfirmBtn.addEventListener('click', () => {
+        onConfirmCallback();
+        hideModal();
+    }, { once: true }); // 'once: true' remove o listener após o clique
+
+    newCancelBtn.addEventListener('click', hideModal, { once: true });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            hideModal();
+        }
+    }, { once: true });
+
+    modal.classList.add('show');
+}
+// ===============================================
+// FIM FUNÇÃO MODAL DE CONFIRMAÇÃO
+// ===============================================
+
+
+// Função para renderizar as estrelas e a nota
 function renderRating(product) {
     const container = document.getElementById('product-rating-container');
     if (!container) return;
 
-    // Se não houver avaliações, exibe uma mensagem
     if (!product.review_count || product.review_count === 0) {
         container.innerHTML = `<p class="no-reviews">Este produto ainda não foi avaliado.</p>`;
         return;
@@ -23,18 +78,15 @@ function renderRating(product) {
 
     let starsHTML = '';
     const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.4 ? 1 : 0; // Arredonda .5 para cima
+    const halfStar = rating % 1 >= 0.4 ? 1 : 0; 
     const emptyStars = 5 - fullStars - halfStar;
 
-    // Adiciona estrelas cheias
     for (let i = 0; i < fullStars; i++) {
         starsHTML += '<i class="ri-star-fill"></i>';
     }
-    // Adiciona meia estrela se necessário
     if (halfStar) {
         starsHTML += '<i class="ri-star-half-fill"></i>';
     }
-    // Adiciona estrelas vazias
     for (let i = 0; i < emptyStars; i++) {
         starsHTML += '<i class="ri-star-line"></i>';
     }
@@ -48,11 +100,9 @@ function renderRating(product) {
         <span class="review-count">(${count} ${reviewText})</span>
     `;
 }
-// ===============================================
-// ===============================================
 
-// MODIFICADO: Aceita o ID do usuário logado
-async function fetchAndRenderReviews(productId, loggedInUserId) {
+// Função para buscar e renderizar avaliações
+async function fetchAndRenderReviews(productId, loggedInUserId, isAdmin = false) {
     const reviewsList = document.getElementById('reviews-list');
     if (!reviewsList) return;
 
@@ -78,19 +128,26 @@ async function fetchAndRenderReviews(productId, loggedInUserId) {
                 `<img src="${url}" alt="Imagem da avaliação" class="review-card-image">`
             ).join('');
 
-            // ===============================================
-            // INÍCIO DA MODIFICAÇÃO: Botão de Excluir
-            // ===============================================
-            // Verifica se o usuário logado é o autor da avaliação
             const isAuthor = loggedInUserId && review.user_id === loggedInUserId;
-            const deleteButtonHTML = isAuthor
-                ? `<button class"delete-my-review-btn" data-id="${review.id}">
+            const canEdit = isAuthor; 
+            const canDelete = isAuthor; 
+
+            // Botão de Edição (só para o autor)
+            const editButtonHTML = canEdit
+                ? `<button class="edit-my-review-btn" 
+                      data-id="${review.id}" 
+                      data-rating="${review.rating}" 
+                      data-comment="${encodeURIComponent(review.comment || '')}">
+                       <i class="ri-pencil-line"></i> Editar
+                   </button>`
+                : '';
+            
+            // Botão de Exclusão (para o autor ou admin)
+            const deleteButtonHTML = canDelete
+                ? `<button class="delete-my-review-btn" data-id="${review.id}">
                      <i class="ri-delete-bin-line"></i> Excluir
                    </button>`
                 : '';
-            // ===============================================
-            // FIM DA MODIFICAÇÃO
-            // ===============================================
 
             return `
             <div class="review-card">
@@ -101,20 +158,21 @@ async function fetchAndRenderReviews(productId, loggedInUserId) {
                         <div class="stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
                     </div>
                 </header>
-                <p>${review.comment}</p>
+                <p>${review.comment || '<i>(Sem comentário)</i>'}</p>
                 <div class="review-card-images">${imagesHTML}</div>
                 
                 <footer>
                     <span>${new Date(review.created_at).toLocaleDateString()}</span>
-                    ${deleteButtonHTML}
+                    <div class="review-author-actions">
+                        ${editButtonHTML}
+                        ${deleteButtonHTML}
+                    </div>
                 </footer>
             </div>
             `;
         }).join('');
     }
 }
-// Função para simular o cálculo de frete
-// ... (se houver, mantenha)
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -126,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    showLoader(); // <-- Loader principal da página
+    showLoader(); 
 
     try {
         const product = await productManager.getProductById(productId);
@@ -136,10 +194,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        renderRating(product); // Renderiza a nota
+        renderRating(product); 
 
-        // Preenche a página com as informações do produto
-        document.title = `${product.name} • Cyber X`;
+        document.title = `${product.name} • Tech Nexus`;
         document.getElementById('productImg').src = product.img || 'geral/img/placeholder.png';
         document.getElementById('brandMeta').textContent = product.brand_meta || 'Marca não informada';
         document.getElementById('sku').textContent = `SKU: ${product.sku || 'N/A'}`;
@@ -150,39 +207,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('installments').textContent = product.installments || '';
         document.getElementById('stock').textContent = `Estoque: ${product.stock || 0}`;
         
-        // Pega o botão de comprar
         const buyBtn = document.getElementById('buyBtn');
         if (buyBtn) {
             buyBtn.addEventListener('click', () => cart.addToCart(product));
         }
 
-        // --- LÓGICA DE AVALIAÇÕES E WISHLIST ---
-        
-        // MODIFICADO: Pega o usuário ANTES de renderizar as avaliações
         const user = await authManager.getCurrentUser();
-        await fetchAndRenderReviews(productId, user ? user.id : null); // Passa o ID do usuário
+        let isAdmin = false;
+        if (user) {
+            const profile = await authManager.fetchUserProfile();
+            if (profile) {
+                isAdmin = profile.role === 'admin';
+            }
+        }
+        
+        await fetchAndRenderReviews(productId, user ? user.id : null, isAdmin);
         
         const reviewForm = document.getElementById('review-form');
         const reviewNotice = document.getElementById('review-login-notice');
         const wishlistBtn = document.getElementById('wishlist-btn');
 
+        const reviewEditIdInput = document.createElement('input');
+        reviewEditIdInput.type = 'hidden';
+        reviewEditIdInput.id = 'review-edit-id';
+        reviewForm.appendChild(reviewEditIdInput);
+        
+        const reviewSubmitBtn = reviewForm.querySelector('button[type="submit"]');
+        const originalBtnText = reviewSubmitBtn.textContent;
+
         if (user) {
             reviewForm.style.display = 'flex';
             reviewNotice.style.display = 'none';
 
-            // Checa se o item já está na wishlist e atualiza o ícone
             const isWishlisted = await wishlistManager.isWishlisted(productId);
             if (isWishlisted) {
                 wishlistBtn.classList.add('active', 'ri-heart-fill');
                 wishlistBtn.classList.remove('ri-heart-line');
             }
 
-            // Listener para o preview de imagens
             const imageUploadInput = document.getElementById('review-images-upload');
             const imagePreviewContainer = document.getElementById('review-images-preview');
 
             imageUploadInput.addEventListener('change', () => {
-                imagePreviewContainer.innerHTML = ''; // Limpa previews antigos
+                imagePreviewContainer.innerHTML = ''; 
                 const files = Array.from(imageUploadInput.files);
                 files.forEach(file => {
                     const reader = new FileReader();
@@ -196,65 +263,89 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             });
 
-            // Listener para ENVIAR avaliação
+            // Listener para ENVIAR ou ATUALIZAR avaliação
             reviewForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                // O 'user' já foi pego lá em cima, não precisa de 'await' aqui
                 if (!user) return;
-
+                
                 showLoader();
 
                 const ratingInput = reviewForm.querySelector('input[name="rating"]:checked');
+                const comment = document.getElementById('review-comment').value;
+
+                // ===============================================
+                // INÍCIO: VALIDAÇÃO USANDO showToast
+                // ===============================================
+
+                // 1. Validação das Estrelas
                 if (!ratingInput) {
                     showToast('Por favor, selecione uma nota de 1 a 5 estrelas.', 'error');
                     hideLoader();
                     return;
                 }
-
+                
+                // 2. Validação do Comentário
+                if (!comment || comment.trim() === '') {
+                    showToast('Por favor, escreva um comentário para sua avaliação.', 'error');
+                    hideLoader();
+                    return;
+                }
+                
                 const rating = ratingInput.value;
-                const comment = document.getElementById('review-comment').value;
-                const files = document.getElementById('review-images-upload').files;
-                const imageUrls = [];
+
+                // ===============================================
+                // FIM: VALIDAÇÃO USANDO showToast
+                // ===============================================
+
+                const reviewIdToUpdate = reviewEditIdInput.value;
 
                 try {
-                    // Upload de imagens...
-                    const uploadPromises = Array.from(files).map(async (file) => {
-                        const fileName = `${user.id}/${productId}/${Date.now()}-${file.name}`;
-                        const { error: uploadError } = await supabase.storage
-                            .from('review-images')
-                            .upload(fileName, file);
+                    if (reviewIdToUpdate) {
+                        // --- MODO DE ATUALIZAÇÃO ---
+                        const { error: updateError } = await supabase.from('reviews')
+                            .update({ rating, comment })
+                            .eq('id', reviewIdToUpdate)
+                            .eq('user_id', user.id); 
+                        if (updateError) throw updateError;
+                        showToast('Avaliação atualizada com sucesso!');
+                    } else {
+                        // --- MODO DE INSERÇÃO (Lógica Original) ---
+                        const files = document.getElementById('review-images-upload').files;
+                        const imageUrls = [];
+                        const uploadPromises = Array.from(files).map(async (file) => {
+                            const fileName = `${user.id}/${productId}/${Date.now()}-${file.name}`;
+                            const { error: uploadError } = await supabase.storage
+                                .from('review-images')
+                                .upload(fileName, file);
+                            if (uploadError) {
+                                throw new Error(`Falha no upload de ${file.name}: ${uploadError.message}`);
+                            }
+                            const { data } = supabase.storage.from('review-images').getPublicUrl(fileName);
+                            return data.publicUrl;
+                        });
+                        const uploadedUrls = await Promise.all(uploadPromises);
+                        imageUrls.push(...uploadedUrls);
 
-                        if (uploadError) {
-                            throw new Error(`Falha no upload de ${file.name}: ${uploadError.message}`);
-                        }
-
-                        const { data } = supabase.storage.from('review-images').getPublicUrl(fileName);
-                        return data.publicUrl;
-                    });
-
-                    const uploadedUrls = await Promise.all(uploadPromises);
-                    imageUrls.push(...uploadedUrls);
-
-                    // Insere a avaliação no banco de dados
-                    const { error: insertError } = await supabase.from('reviews').insert({
-                        product_id: productId,
-                        user_id: user.id,
-                        rating,
-                        comment,
-                        image_urls: imageUrls.length > 0 ? imageUrls : null,
-                    });
-
-                    if (insertError) throw insertError;
-
-                    showToast('Avaliação enviada com sucesso!');
+                        const { error: insertError } = await supabase.from('reviews').insert({
+                            product_id: productId,
+                            user_id: user.id,
+                            rating,
+                            comment,
+                            image_urls: imageUrls.length > 0 ? imageUrls : null,
+                        });
+                        if (insertError) throw insertError;
+                        showToast('Avaliação enviada com sucesso!');
+                    }
+                    // --- Ações Pós-Sucesso (Comum a ambos) ---
                     reviewForm.reset();
+                    reviewEditIdInput.value = ''; 
+                    reviewSubmitBtn.textContent = originalBtnText; 
                     document.getElementById('review-images-preview').innerHTML = '';
-                    await fetchAndRenderReviews(productId, user.id); // Re-renderiza as avaliações
+                    
+                    await fetchAndRenderReviews(productId, user.id, isAdmin); 
 
-                    // Re-busca o produto para atualizar a nota média na tela
                     const updatedProduct = await productManager.getProductById(productId);
                     if (updatedProduct) renderRating(updatedProduct);
-
                 } catch (error) {
                     showToast(`Erro: ${error.message}`, 'error');
                 } finally {
@@ -275,7 +366,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         wishlistBtn.classList.toggle('active');
                         wishlistBtn.classList.toggle('ri-heart-fill');
                         wishlistBtn.classList.toggle('ri-heart-line');
-                        
                         const message = isCurrentlyWishlisted
                             ? 'Produto removido da lista de desejos.'
                             : 'Produto adicionado à lista de desejos!';
@@ -288,44 +378,61 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            // ===============================================
-            // INÍCIO DA MODIFICAÇÃO: Listener para Excluir Avaliação
-            // ===============================================
+            // Listener para Excluir e Editar
             const reviewsList = document.getElementById('reviews-list');
             reviewsList.addEventListener('click', async (e) => {
+                
+                // --- Lógica de Excluir ---
                 const deleteBtn = e.target.closest('.delete-my-review-btn');
-                if (!deleteBtn) return; // Sai se o clique não foi no botão
+                if (deleteBtn) {
+                    const reviewId = deleteBtn.dataset.id;
+                    
+                    // Usa o modal de confirmação para a exclusão
+                    showItemConfirmModal('Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.', async () => {
+                        showLoader();
+                        try {
+                            const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+                            if (error) throw error;
+                            
+                            showToast('Avaliação excluída com sucesso!', 'success');
+                            
+                            await fetchAndRenderReviews(productId, user.id, isAdmin);
+                            const updatedProduct = await productManager.getProductById(productId);
+                            if (updatedProduct) renderRating(updatedProduct);
 
-                const reviewId = deleteBtn.dataset.id;
+                        } catch (error) {
+                            showToast(`Erro ao excluir avaliação: ${error.message}`, 'error');
+                        } finally {
+                            hideLoader();
+                        }
+                    });
+                    return; 
+                }
 
-                if (confirm('Tem certeza que deseja excluir sua avaliação? Esta ação não pode ser desfeita.')) {
-                    showLoader();
-                    try {
-                        const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
-                        
-                        if (error) throw error;
-                        
-                        showToast('Avaliação excluída com sucesso!', 'success');
-                        // Recarrega as avaliações e a nota do produto
-                        await fetchAndRenderReviews(productId, user.id);
-                        const updatedProduct = await productManager.getProductById(productId);
-                        if (updatedProduct) renderRating(updatedProduct);
+                // --- Lógica de Editar (só aparece para o autor) ---
+                const editBtn = e.target.closest('.edit-my-review-btn');
+                if (editBtn) {
+                    const reviewId = editBtn.dataset.id;
+                    const rating = editBtn.dataset.rating;
+                    const comment = decodeURIComponent(editBtn.dataset.comment);
 
-                    } catch (error) {
-                        showToast(`Erro ao excluir avaliação: ${error.message}`, 'error');
-                    } finally {
-                        hideLoader();
+                    reviewEditIdInput.value = reviewId;
+                    document.getElementById('review-comment').value = comment;
+                    if (document.getElementById(`${rating}-stars`)) {
+                        document.getElementById(`${rating}-stars`).checked = true;
                     }
+
+                    reviewSubmitBtn.textContent = 'Atualizar Avaliação';
+                    reviewForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             });
-            // ===============================================
-            // FIM DA MODIFICAÇÃO
-            // ===============================================
 
         } else {
+            // Se o usuário não estiver logado
             reviewForm.style.display = 'none';
             reviewNotice.style.display = 'block';
             wishlistBtn.addEventListener('click', () => {
+                // Mensagem de erro para usuários não logados
                 showToast('Você precisa estar logado para adicionar à wishlist.', 'error');
                 window.location.href = 'login.html';
             });
@@ -334,6 +441,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error("Erro ao carregar a página do produto:", error);
         document.querySelector('.product-detail').innerHTML = '<h1>Erro ao carregar produto.</h1>';
     } finally {
-        hideLoader(); // <-- Loader principal da página
+        hideLoader(); 
     }
 });
