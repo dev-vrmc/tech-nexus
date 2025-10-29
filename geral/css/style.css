@@ -2762,9 +2762,61 @@ label {
 }
 
 .review-card footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.9rem;
     color: var(--text-color-alt, #777);
-    text-align: right;
+    margin-top: 0.5rem; 
+    padding-top: 0.5rem; 
+    border-top: 1px solid var(--shadow-color);
+}
+
+.review-author-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.edit-my-review-btn {
+    background: none;
+    border: 1px solid var(--first-color-light);
+    color: var(--first-color-light);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: var(--small-font-size);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.edit-my-review-btn:hover {
+    background: var(--first-color-light);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.delete-my-review-btn {
+    background: none;
+    border: 1px solid var(--first-color-alt);
+    color: var(--first-color-alt);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: var(--small-font-size);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.delete-my-review-btn:hover {
+    background: var(--first-color-alt);
+    color: #fff;
+    transform: scale(1.05);
 }
 
 /* ==== FORMULÁRIO ==== */
@@ -3766,27 +3818,18 @@ label {
     transform: scale(1.05);
 }
 
-/*
- * ESTILOS PARA LINKS DE PRODUTOS E AVALIAÇÕES
- * Adicione este bloco ao seu arquivo style.css
- */
 
-/* 1. Link do nome do produto no carrinho (usado em cart.js) */
 .cart-item-link {
-    /* Herda a cor do <h4> pai (var(--title-color)) */
     color: inherit;
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
 .cart-item-link:hover {
-    /* Muda para o roxo claro no hover, como outros links */
     color: var(--first-color-alt);
 }
 
-/* 2. Links para produtos e avaliações no Painel Admin (usado em admin.js) */
 .admin-link {
-    /* Usa um roxo claro para destacar que é um link clicável */
     color: var(--first-color-light);
     text-decoration: none;
     font-weight: 600;
@@ -3794,24 +3837,19 @@ label {
 }
 
 .admin-link:hover {
-    /* Roxo mais claro e sublinhado no hover */
     color: var(--first-color-alt);
     text-decoration: underline;
 }
 
-/* 3. Links para produtos no Histórico de Pedidos da "Minha Conta" (usado em account.js) */
 .order-history-link {
-    /* Cor de texto padrão da seção */
     color: var(--text-color);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s ease;
-    /* Adiciona um sublinhado sutil para indicar o link */
     border-bottom: 1px dashed var(--shadow-color);
 }
 
 .order-history-link:hover {
-    /* Muda para a cor de destaque roxa no hover */
     color: var(--first-color);
     border-bottom-color: var(--first-color);
 }

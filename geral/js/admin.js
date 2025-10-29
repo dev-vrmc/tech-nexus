@@ -1,4 +1,5 @@
 // Arquivo: geral/js/admin.js
+// (Nenhuma alteração necessária. O código abaixo já está correto.)
 
 import { supabase } from './supabase.js';
 import { authManager } from './auth.js';
@@ -535,6 +536,8 @@ async function handleDeleteReview(id) {
         showLoader();
         try {
             // Deleta a avaliação da tabela 'reviews'
+            // NOTA: Esta chamada está CORRETA. Se ela falhar, é um problema de
+            // RLS (Row Level Security) no Supabase.
             const { error } = await supabase.from('reviews').delete().eq('id', id);
             
             if (error) {
