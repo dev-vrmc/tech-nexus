@@ -56,7 +56,7 @@
     gap: 2.5rem;
   }
 
-  .information__login>h1 {
+  .information__login > h1 {
     font-size: 50px;
   }
 
@@ -104,7 +104,7 @@
     width: 450px;
   }
 
-  .information__login>h1 {
+  .information__login > h1 {
     font-size: 24px;
   }
 
@@ -304,7 +304,6 @@
    LOGIN, CADASTRO E CONTA
    ========================================================== */
 @media (max-width: 768px) {
-
   .main-login,
   .section__login {
     padding: 1rem;
@@ -312,7 +311,7 @@
     flex-direction: column;
   }
 
-  .information__login>h1 {
+  .information__login > h1 {
     font-size: 1.6rem;
   }
 
@@ -373,6 +372,7 @@
     border-top-right-radius: 0px;
     opacity: 1;
     transform: translateY(20px);
+    width: 100%;
   }
 
   /* Aparece ao hover */
@@ -380,7 +380,6 @@
     opacity: 1;
     transform: translateY(20px);
   }
-
 }
 
 @media (max-width: 600px) {
@@ -462,7 +461,7 @@
   }
 
   #adminOrders .admin-order,
-  #adminProducts>div {
+  #adminProducts > div {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -639,7 +638,6 @@
    Corrige quebra do .wrap e mantém conteúdo centralizado
    ========================= */
 @media (min-width: 320px) and (max-width: 400px) {
-
   /* Corrige o contêiner principal */
   .product-detail .wrap,
   .wrap {
@@ -738,7 +736,6 @@
    LOGIN — RESPONSIVIDADE ATÉ 900px
    ========================================================== */
 @media (max-width: 900px) {
-
   /* Remove vídeo e usa fundo preto sólido */
   .background-login {
     display: none;
@@ -769,7 +766,7 @@
   }
 
   /* Título e logo */
-  .information__login>h1 {
+  .information__login > h1 {
     font-size: 1.8rem;
     line-height: 1.3;
     padding: 0 1rem;
@@ -822,7 +819,6 @@
 }
 
 @media (max-width: 768px) {
-
   /* Ícone holograma */
   .logo-holograma-link {
     position: relative;
@@ -868,7 +864,7 @@
     align-items: center;
   }
 
-  .cart-item-details>h4 {
+  .cart-item-details > h4 {
     padding: 20px;
   }
 
@@ -994,5 +990,13 @@
   #adminReviewsContainer {
     justify-items: center;
     justify-content: center;
+  }
+  .review-card footer {
+    display: flex;
+    flex-direction: column;
+  }
+  .review-author-actions{
+    padding-top: 20px;
+    flex-direction: column;
   }
 }
