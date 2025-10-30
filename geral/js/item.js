@@ -130,7 +130,7 @@ async function fetchAndRenderReviews(productId, loggedInUserId, isAdmin = false)
 
             const isAuthor = loggedInUserId && review.user_id === loggedInUserId;
             const canEdit = isAuthor; 
-            const canDelete = isAuthor; 
+            const canDelete = isAuthor || isAdmin; 
 
             // Botão de Edição (só para o autor)
             const editButtonHTML = canEdit

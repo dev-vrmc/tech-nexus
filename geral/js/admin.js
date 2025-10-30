@@ -34,6 +34,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Lógica de navegação da barra lateral
         setupSidebarNavigation();
 
+        const reviewsContainer = document.getElementById('adminReviewsContainer');
+        if (reviewsContainer) {
+            reviewsContainer.addEventListener('click', async (e) => {
+                // Procura pelo botão de exclusão que foi clicado
+                const deleteBtn = e.target.closest('.delete-btn');
+
+                if (deleteBtn) {
+                    const reviewId = deleteBtn.dataset.id;
+                    if (reviewId) {
+                        // Chama a função de exclusão (que já existe no admin.js)
+                        handleDeleteReview(reviewId);
+                    }
+                }
+            });
+        }
         const form = document.getElementById('adminAddProduct');
         const formTitle = document.getElementById('product-form-title');
         const hiddenIdInput = form.querySelector('input[name="id"]');
@@ -446,6 +461,9 @@ async function handleDeleteOrder(orderId) {
 // =======================================================
 // LÓGICA DE AVALIAÇÕES (REVIEWS)
 // =======================================================
+// =======================================================
+// LÓGICA DE AVALIAÇÕES (REVIEWS)
+// =======================================================
 async function loadReviews() {
     showLoader();
     const container = document.getElementById('adminReviewsContainer');
@@ -463,7 +481,7 @@ async function loadReviews() {
                 image_urls,
                 profile:profiles(full_name, avatar_url),
                 product:products(id, name)
-            `) // <-- MODIFICADO: Buscando 'id' e 'name' de products
+            `)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -476,11 +494,10 @@ async function loadReviews() {
         container.innerHTML = reviews.map(review => {
             const avatarSrc = review.profile?.avatar_url || 'geral/img/logo/simbolo.png';
             const authorName = review.profile?.full_name || 'Usuário Anônimo';
-            
+
             const productName = review.product?.name || 'Produto Removido';
             const productId = review.product?.id;
 
-            // MODIFICADO: Adiciona link para o item e âncora para as reviews
             const productHTML = productId
                 ? `<a href="item.html?id=${productId}#reviews-list" target="_blank" class="admin-link">${productName}</a>`
                 : productName;
@@ -502,24 +519,16 @@ async function loadReviews() {
                 </header>
                 <p class="admin-review-comment">${review.comment || '<i>(Sem comentário)</i>'}</p>
                 ${imagesHTML ? `<div class="admin-review-images">${imagesHTML}</div>` : ''}
-                <footer class="admin-review-footer">
+                    <footer class="admin-review-footer">
                     <span>${new Date(review.created_at).toLocaleString('pt-BR')}</span>
-                    <button class="delete-btn" data-id="${review.id}">
+                    <button class="delete-btn delete-my-review-btn" data-id="${review.id}">
                         <i class="ri-delete-bin-line"></i> Excluir
                     </button>
                 </footer>
             </div>
+            </div>
             `;
         }).join('');
-
-        // Adiciona listeners aos botões de excluir
-        container.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Pega o ID do botão mais próximo
-                const reviewId = e.target.closest('.delete-btn').dataset.id;
-                handleDeleteReview(reviewId);
-            });
-        });
 
     } catch (error) {
         console.error('Erro ao buscar avaliações:', error);
@@ -539,7 +548,7 @@ async function handleDeleteReview(id) {
             // NOTA: Esta chamada está CORRETA. Se ela falhar, é um problema de
             // RLS (Row Level Security) no Supabase.
             const { error } = await supabase.from('reviews').delete().eq('id', id);
-            
+
             if (error) {
                 showToast(`Erro ao excluir avaliação: ${error.message}`, 'error');
             } else {
