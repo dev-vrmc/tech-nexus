@@ -3,34 +3,74 @@
 import { supabase } from './supabase.js';
 import { productManager } from './products.js';
 import { cart } from './cart.js';
-import { renderProducts, showToast, showLoader, hideLoader } from './ui.js';
+// MODIFICADO: Removido 'showToast' da importação de 'ui.js'
+import { renderProducts, showLoader, hideLoader } from './ui.js';
 import { authManager } from './auth.js';
 import { wishlistManager } from './wishlist.js';
 
-// ===============================================
-// FUNÇÃO DE MODAL DE CONFIRMAÇÃO (Sim/Não)
-// Mantida, pois é usada para DELETAR a review
-// ===============================================
+// =======================================================
+// INÍCIO: NOVA FUNÇÃO showToast (FALLBACK)
+// =======================================================
 /**
- * Exibe um modal de confirmação genérico para a página de item.
+ * Exibe um popup de notificação (toast).
  * @param {string} message A mensagem a ser exibida.
- * @param {function} onConfirmCallback A função a ser executada se o usuário confirmar.
+ * @param {string} type O tipo de toast ('success' ou 'error').
  */
-function showItemConfirmModal(message, onConfirmCallback) {
-    const modal = document.getElementById('item-confirm-modal');
-    const messageEl = document.getElementById('item-confirm-message');
-    const confirmBtn = document.getElementById('item-confirm-yes');
-    const cancelBtn = document.getElementById('item-confirm-cancel');
-
-    if (!modal || !messageEl || !confirmBtn || !cancelBtn) {
-        console.error('Elementos do modal de confirmação não encontrados. Usando confirm() nativo.');
-        if (confirm(message)) { onConfirmCallback(); }
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        console.error('Container de Toast não encontrado!');
         return;
     }
-    
-    // Atualiza o texto do botão para ser mais claro
-    const deleteText = message.includes('excluir') ? 'Sim, Excluir' : 'Confirmar';
-    confirmBtn.textContent = deleteText;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`; // 'success' ou 'error'
+    toast.textContent = message;
+
+    container.prepend(toast); // Adiciona no topo
+
+    // Faz a animação de entrada
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10); // Pequeno delay para garantir que a transição CSS ocorra
+
+    // Define um tempo para esconder
+    setTimeout(() => {
+        toast.classList.add('hide');
+    }, 3000); // Fica visível por 3 segundos
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3400); // 3000ms (visível) + 400ms (animação de saída)
+}
+// =======================================================
+// FIM: NOVA FUNÇÃO showToast
+// =======================================================
+
+
+// =======================================================
+// LÓGICA DO MODAL DE CONFIRMAÇÃO (COPIADO DO ADMIN.JS)
+// =======================================================
+/**
+ * Exibe um modal de confirmação genérico.
+ * @param {string} message A mensagem a ser exibida no modal.
+ * @param {function} onConfirmCallback A função a ser executada se o admin confirmar.
+ */
+function showAdminConfirmModal(message, onConfirmCallback) {
+    const modal = document.getElementById('admin-confirm-modal');
+    const messageEl = document.getElementById('admin-confirm-message');
+    const confirmBtn = document.getElementById('admin-confirm-yes');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    const closeBtn = document.getElementById('admin-confirm-close'); // BOTÃO FECHAR (X)
+
+    if (!modal || !messageEl || !confirmBtn || !cancelBtn || !closeBtn) {
+        console.error('Elementos do modal de confirmação não encontrados.');
+        // Fallback para o confirm nativo
+        if (confirm(message)) {
+            onConfirmCallback();
+        }
+        return;
+    }
 
     messageEl.textContent = message;
 
@@ -41,21 +81,31 @@ function showItemConfirmModal(message, onConfirmCallback) {
     const newCancelBtn = cancelBtn.cloneNode(true);
     cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
 
+    const newCloseBtn = closeBtn.cloneNode(true); // Clona o botão fechar
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
     const hideModal = () => modal.classList.remove('show');
 
+    // Adiciona listener ao novo botão de confirmar
     newConfirmBtn.addEventListener('click', () => {
         onConfirmCallback();
         hideModal();
-    }, { once: true }); // 'once: true' remove o listener após o clique
+    });
 
-    newCancelBtn.addEventListener('click', hideModal, { once: true });
+    // Adiciona listener ao novo botão de cancelar
+    newCancelBtn.addEventListener('click', hideModal);
 
+    // Adiciona listener ao novo botão de fechar (X)
+    newCloseBtn.addEventListener('click', hideModal);
+
+    // Adiciona listener para fechar clicando fora
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             hideModal();
         }
-    }, { once: true });
+    }, { once: true }); // Executa apenas uma vez
 
+    // Mostra o modal
     modal.classList.add('show');
 }
 // ===============================================
@@ -78,7 +128,7 @@ function renderRating(product) {
 
     let starsHTML = '';
     const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.4 ? 1 : 0; 
+    const halfStar = rating % 1 >= 0.4 ? 1 : 0;
     const emptyStars = 5 - fullStars - halfStar;
 
     for (let i = 0; i < fullStars; i++) {
@@ -124,13 +174,14 @@ async function fetchAndRenderReviews(productId, loggedInUserId, isAdmin = false)
             const avatarSrc = review.profile?.avatar_url || 'geral/img/logo/simbolo.png';
             const authorName = review.profile?.full_name || 'Usuário Anônimo';
 
+            // MODIFICADO: Adiciona a classe 'clickable-review-image'
             const imagesHTML = (review.image_urls || []).map(url =>
-                `<img src="${url}" alt="Imagem da avaliação" class="review-card-image">`
+                `<img src="${url}" alt="Imagem da avaliação" class="review-card-image clickable-review-image">`
             ).join('');
 
             const isAuthor = loggedInUserId && review.user_id === loggedInUserId;
-            const canEdit = isAuthor; 
-            const canDelete = isAuthor || isAdmin; 
+            const canEdit = isAuthor;
+            const canDelete = isAuthor || isAdmin;
 
             // Botão de Edição (só para o autor)
             const editButtonHTML = canEdit
@@ -141,7 +192,7 @@ async function fetchAndRenderReviews(productId, loggedInUserId, isAdmin = false)
                        <i class="ri-pencil-line"></i> Editar
                    </button>`
                 : '';
-            
+
             // Botão de Exclusão (para o autor ou admin)
             const deleteButtonHTML = canDelete
                 ? `<button class="delete-my-review-btn" data-id="${review.id}">
@@ -184,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    showLoader(); 
+    showLoader();
 
     try {
         const product = await productManager.getProductById(productId);
@@ -193,8 +244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelector('.product-detail').innerHTML = '<h1>Produto não encontrado.</h1>';
             return;
         }
-        
-        renderRating(product); 
+
+        renderRating(product);
 
         document.title = `${product.name} • Tech Nexus`;
         document.getElementById('productImg').src = product.img || 'geral/img/placeholder.png';
@@ -206,7 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `R$ ${Number(product.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         document.getElementById('installments').textContent = product.installments || '';
         document.getElementById('stock').textContent = `Estoque: ${product.stock || 0}`;
-        
+
         const buyBtn = document.getElementById('buyBtn');
         if (buyBtn) {
             buyBtn.addEventListener('click', () => cart.addToCart(product));
@@ -220,9 +271,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 isAdmin = profile.role === 'admin';
             }
         }
-        
+
         await fetchAndRenderReviews(productId, user ? user.id : null, isAdmin);
-        
+
         const reviewForm = document.getElementById('review-form');
         const reviewNotice = document.getElementById('review-login-notice');
         const wishlistBtn = document.getElementById('wishlist-btn');
@@ -231,9 +282,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         reviewEditIdInput.type = 'hidden';
         reviewEditIdInput.id = 'review-edit-id';
         reviewForm.appendChild(reviewEditIdInput);
-        
+
         const reviewSubmitBtn = reviewForm.querySelector('button[type="submit"]');
         const originalBtnText = reviewSubmitBtn.textContent;
+
+        // ===============================================
+        // Variáveis do Modal de Imagem (definidas aqui para escopo)
+        // ===============================================
+        const imageModal = document.getElementById('image-modal-overlay');
+        const modalImg = document.getElementById('modal-image-content');
+        const imageModalCloseBtn = document.getElementById('image-modal-close');
 
         if (user) {
             reviewForm.style.display = 'flex';
@@ -249,13 +307,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const imagePreviewContainer = document.getElementById('review-images-preview');
 
             imageUploadInput.addEventListener('change', () => {
-                imagePreviewContainer.innerHTML = ''; 
+                imagePreviewContainer.innerHTML = '';
                 const files = Array.from(imageUploadInput.files);
                 files.forEach(file => {
                     const reader = new FileReader();
                     reader.onload = () => {
                         const img = document.createElement('img');
                         img.src = reader.result;
+                        // MODIFICADO: Adiciona a classe 'review-image-preview' para o listener funcionar
                         img.classList.add('review-image-preview');
                         imagePreviewContainer.appendChild(img);
                     };
@@ -267,47 +326,71 @@ document.addEventListener('DOMContentLoaded', async () => {
             reviewForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (!user) return;
-                
-                showLoader();
 
                 const ratingInput = reviewForm.querySelector('input[name="rating"]:checked');
                 const comment = document.getElementById('review-comment').value;
 
                 // ===============================================
-                // INÍCIO: VALIDAÇÃO USANDO showToast
+                // INÍCIO: VALIDAÇÃO USANDO showToast (MODIFICADO)
                 // ===============================================
 
                 // 1. Validação das Estrelas
                 if (!ratingInput) {
+                    // USA O NOVO showToast
                     showToast('Por favor, selecione uma nota de 1 a 5 estrelas.', 'error');
-                    hideLoader();
-                    return;
+                    return; // Para a execução
                 }
-                
+
                 // 2. Validação do Comentário
                 if (!comment || comment.trim() === '') {
+                    // USA O NOVO showToast
                     showToast('Por favor, escreva um comentário para sua avaliação.', 'error');
-                    hideLoader();
-                    return;
+                    return; // Para a execução
                 }
-                
+
                 const rating = ratingInput.value;
 
                 // ===============================================
                 // FIM: VALIDAÇÃO USANDO showToast
                 // ===============================================
 
+                // Só mostra o loader APÓS a validação
+                showLoader();
+
                 const reviewIdToUpdate = reviewEditIdInput.value;
 
                 try {
                     if (reviewIdToUpdate) {
-                        // --- MODO DE ATUALIZAÇÃO ---
-                        const { error: updateError } = await supabase.from('reviews')
-                            .update({ rating, comment })
-                            .eq('id', reviewIdToUpdate)
-                            .eq('user_id', user.id); 
-                        if (updateError) throw updateError;
-                        showToast('Avaliação atualizada com sucesso!');
+                        // --- MODO DE ATUALIZAÇÃO (MODIFICADO) ---
+                        // Pede confirmação ANTES de atualizar
+                        showAdminConfirmModal('Tem certeza que deseja atualizar esta avaliação?', async () => {
+                            showLoader(); // Mostra loader para a ação de atualizar
+                            try {
+                                const { error: updateError } = await supabase.from('reviews')
+                                    .update({ rating, comment })
+                                    .eq('id', reviewIdToUpdate)
+                                    .eq('user_id', user.id);
+                                if (updateError) throw updateError;
+                                showToast('Avaliação atualizada com sucesso!');
+
+                                // Limpa o formulário e recarrega
+                                reviewForm.reset();
+                                reviewEditIdInput.value = '';
+                                reviewSubmitBtn.textContent = originalBtnText;
+                                document.getElementById('review-images-preview').innerHTML = '';
+
+                                await fetchAndRenderReviews(productId, user.id, isAdmin);
+                                const updatedProduct = await productManager.getProductById(productId);
+                                if (updatedProduct) renderRating(updatedProduct);
+
+                            } catch (error) {
+                                showToast(`Erro ao atualizar: ${error.message}`, 'error');
+                            } finally {
+                                hideLoader();
+                            }
+                        });
+                        hideLoader(); // Esconde o loader inicial, pois estamos esperando o modal
+
                     } else {
                         // --- MODO DE INSERÇÃO (Lógica Original) ---
                         const files = document.getElementById('review-images-upload').files;
@@ -335,24 +418,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                         if (insertError) throw insertError;
                         showToast('Avaliação enviada com sucesso!');
-                    }
-                    // --- Ações Pós-Sucesso (Comum a ambos) ---
-                    reviewForm.reset();
-                    reviewEditIdInput.value = ''; 
-                    reviewSubmitBtn.textContent = originalBtnText; 
-                    document.getElementById('review-images-preview').innerHTML = '';
-                    
-                    await fetchAndRenderReviews(productId, user.id, isAdmin); 
 
-                    const updatedProduct = await productManager.getProductById(productId);
-                    if (updatedProduct) renderRating(updatedProduct);
+                        // Limpa o formulário e recarrega
+                        reviewForm.reset();
+                        reviewEditIdInput.value = '';
+                        reviewSubmitBtn.textContent = originalBtnText;
+                        document.getElementById('review-images-preview').innerHTML = '';
+
+                        await fetchAndRenderReviews(productId, user.id, isAdmin);
+                        const updatedProduct = await productManager.getProductById(productId);
+                        if (updatedProduct) renderRating(updatedProduct);
+                    }
                 } catch (error) {
                     showToast(`Erro: ${error.message}`, 'error');
                 } finally {
-                    hideLoader();
+                    // Garante que o loader seja escondido se a inserção (não-atualização) falhar
+                    if (!reviewIdToUpdate) {
+                        hideLoader();
+                    }
                 }
             });
-            
+
             // Listener para o botão de Wishlist
             wishlistBtn.addEventListener('click', async () => {
                 showLoader();
@@ -381,21 +467,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Listener para Excluir e Editar
             const reviewsList = document.getElementById('reviews-list');
             reviewsList.addEventListener('click', async (e) => {
-                
-                // --- Lógica de Excluir ---
+
+                // --- Lógica de Excluir (MODIFICADO) ---
                 const deleteBtn = e.target.closest('.delete-my-review-btn');
                 if (deleteBtn) {
                     const reviewId = deleteBtn.dataset.id;
-                    
-                    // Usa o modal de confirmação para a exclusão
-                    showItemConfirmModal('Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.', async () => {
+
+                    // Usa o modal de confirmação do ADMIN para a exclusão
+                    showAdminConfirmModal('Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.', async () => {
                         showLoader();
                         try {
                             const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
                             if (error) throw error;
-                            
+
                             showToast('Avaliação excluída com sucesso!', 'success');
-                            
+
                             await fetchAndRenderReviews(productId, user.id, isAdmin);
                             const updatedProduct = await productManager.getProductById(productId);
                             if (updatedProduct) renderRating(updatedProduct);
@@ -406,7 +492,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             hideLoader();
                         }
                     });
-                    return; 
+                    return;
                 }
 
                 // --- Lógica de Editar (só aparece para o autor) ---
@@ -437,10 +523,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.location.href = 'login.html';
             });
         }
+
+        // ===============================================
+        // INÍCIO: LÓGICA DO MODAL DE IMAGEM
+        // ===============================================
+        const reviewsListContainer = document.getElementById('reviews-list');
+
+        // As variáveis (imageModal, modalImg, imageModalCloseBtn) já foram definidas acima
+
+        if (reviewsListContainer && imageModal && modalImg && imageModalCloseBtn) {
+            // Abre o modal ao clicar na imagem
+            reviewsListContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('clickable-review-image')) {
+                    modalImg.src = e.target.src;
+                    imageModal.classList.add('show');
+                }
+            });
+
+            // Fecha o modal ao clicar no 'X'
+            imageModalCloseBtn.addEventListener('click', () => {
+                imageModal.classList.remove('show');
+            });
+
+            // Fecha o modal ao clicar no overlay
+            imageModal.addEventListener('click', (e) => {
+                if (e.target === imageModal) {
+                    imageModal.classList.remove('show');
+                }
+            });
+        }
+        // ===============================================
+        // FIM: LÓGICA DO MODAL DE IMAGEM
+        // ===============================================
+
+
     } catch (error) {
         console.error("Erro ao carregar a página do produto:", error);
         document.querySelector('.product-detail').innerHTML = '<h1>Erro ao carregar produto.</h1>';
     } finally {
-        hideLoader(); 
+        hideLoader();
     }
 });

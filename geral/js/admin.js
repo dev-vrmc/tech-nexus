@@ -1,5 +1,4 @@
 // Arquivo: geral/js/admin.js
-// (Nenhuma alteração necessária. O código abaixo já está correto.)
 
 import { supabase } from './supabase.js';
 import { authManager } from './auth.js';
@@ -108,6 +107,55 @@ document.addEventListener('DOMContentLoaded', async () => {
                 hideLoader();
             }
         });
+
+        // ===============================================
+        // INÍCIO: LÓGICA DO MODAL DE VISUALIZAÇÃO DE IMAGEM
+        // ===============================================
+        // Estes elementos devem estar presentes no seu admin.html
+        const imageModal = document.getElementById('image-modal-overlay');
+        const modalImg = document.getElementById('modal-image-content');
+        const imageModalCloseBtn = document.getElementById('image-modal-close');
+
+        if (reviewsContainer && imageModal && modalImg && imageModalCloseBtn) {
+
+            // Abre o modal ao clicar na imagem
+            reviewsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('admin-review-image')) {
+                    modalImg.src = e.target.src;
+
+                    // Verifica se a timeline GSAP existe e a executa
+                    if (window.imageModalTimeline) {
+                        window.imageModalTimeline.play();
+                    } else {
+                        imageModal.classList.add('show'); // Fallback caso GSAP falhe
+                    }
+                }
+            });
+
+            // Função unificada para fechar o modal
+            const closeImageModal = () => {
+                if (window.imageModalTimeline) {
+                    window.imageModalTimeline.reverse(); // Reverte a animação
+                } else {
+                    imageModal.classList.remove('show'); // Fallback
+                }
+            };
+
+            // Fecha o modal ao clicar no 'X'
+            imageModalCloseBtn.addEventListener('click', closeImageModal);
+
+            // Fecha o modal ao clicar no overlay
+            imageModal.addEventListener('click', (e) => {
+                if (e.target === imageModal) {
+                    closeImageModal();
+                }
+            });
+        }
+        // ===============================================
+        // FIM: LÓGICA DO MODAL DE VISUALIZAÇÃO DE IMAGEM
+        // ===============================================
+
+
     } catch (authError) {
         showToast('Erro de autenticação.', 'error');
         window.location.href = 'index.html';
@@ -192,8 +240,9 @@ function showAdminConfirmModal(message, onConfirmCallback) {
     const messageEl = document.getElementById('admin-confirm-message');
     const confirmBtn = document.getElementById('admin-confirm-yes');
     const cancelBtn = document.getElementById('confirm-cancel'); // ID do CSS
+    const closeBtn = document.getElementById('admin-confirm-close'); // BOTÃO FECHAR (X)
 
-    if (!modal || !messageEl || !confirmBtn || !cancelBtn) {
+    if (!modal || !messageEl || !confirmBtn || !cancelBtn || !closeBtn) {
         console.error('Elementos do modal de confirmação não encontrados.');
         // Fallback para o confirm nativo
         if (confirm(message)) {
@@ -211,6 +260,10 @@ function showAdminConfirmModal(message, onConfirmCallback) {
     const newCancelBtn = cancelBtn.cloneNode(true);
     cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
 
+    const newCloseBtn = closeBtn.cloneNode(true); // Clona o botão fechar
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+
     const hideModal = () => modal.classList.remove('show');
 
     // Adiciona listener ao novo botão de confirmar
@@ -221,6 +274,9 @@ function showAdminConfirmModal(message, onConfirmCallback) {
 
     // Adiciona listener ao novo botão de cancelar
     newCancelBtn.addEventListener('click', hideModal);
+
+    // Adiciona listener ao novo botão de fechar (X)
+    newCloseBtn.addEventListener('click', hideModal);
 
     // Adiciona listener para fechar clicando fora
     modal.addEventListener('click', (e) => {
@@ -461,9 +517,6 @@ async function handleDeleteOrder(orderId) {
 // =======================================================
 // LÓGICA DE AVALIAÇÕES (REVIEWS)
 // =======================================================
-// =======================================================
-// LÓGICA DE AVALIAÇÕES (REVIEWS)
-// =======================================================
 async function loadReviews() {
     showLoader();
     const container = document.getElementById('adminReviewsContainer');
@@ -503,6 +556,7 @@ async function loadReviews() {
                 : productName;
 
             // Gera HTML para as imagens (se houver)
+            // A classe 'admin-review-image' será o gatilho para o modal
             const imagesHTML = (review.image_urls || []).map(url =>
                 `<img src="${url}" alt="Imagem da avaliação" class="admin-review-image">`
             ).join('');
@@ -545,16 +599,12 @@ async function handleDeleteReview(id) {
         showLoader();
         try {
             // Deleta a avaliação da tabela 'reviews'
-            // NOTA: Esta chamada está CORRETA. Se ela falhar, é um problema de
-            // RLS (Row Level Security) no Supabase.
             const { error } = await supabase.from('reviews').delete().eq('id', id);
 
             if (error) {
                 showToast(`Erro ao excluir avaliação: ${error.message}`, 'error');
             } else {
                 showToast('Avaliação excluída com sucesso!');
-                // O trigger 'on_review_change' no Supabase irá
-                // recalcular a média do produto automaticamente.
                 await loadReviews(); // Recarrega a lista de avaliações
             }
         } catch (err) {

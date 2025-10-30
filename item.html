@@ -10,9 +10,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
   <title>Tech Nexus</title>
-</head>
+  </head>
 
 <body>
+  <div id="toast-container"></div>
   <div id="loader-overlay">
     <div class="loader-spinner"></div>
   </div>
@@ -150,7 +151,7 @@
       <div class="review-upload-section">
         <label for="review-images-upload" class="button">Adicionar Fotos (opcional)</label>
         <input type="file" id="review-images-upload" multiple accept="image/*" style="display:none;">
-        <div id="review-images-preview" class="images-preview-container"></div>
+        <div id="review-images-preview" class="images-preview-container clickable-review-image"></div>
       </div>
 
       <button type="submit" class="button">Enviar Avaliação</button>
@@ -171,9 +172,24 @@
     <div id="related-products-container" class="products-grid"></div>
   </section>
 
+  <div id="admin-confirm-modal" class="modal-overlay">
+    <div class="modal-content confirm-modal">
+      <i class="ri-close-line modal-close-btn" id="admin-confirm-close"></i>
+      <p id="admin-confirm-message">Tem certeza?</p>
+      <div class="confirm-modal-buttons">
+        <button id="confirm-cancel" class="button-secondary">Cancelar</button>
+        <button id="admin-confirm-yes" class="button">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-modal-overlay" class="modal-overlay">
+    <img src="" alt="Imagem da Avaliação" id="modal-image-content">
+    <i class="ri-close-line" id="image-modal-close"></i>
+  </div>
+
   <footer class="footer">
     <div class="footer__container">
-      <!-- Logo + redes -->
       <div class="footer__column footer__logo">
         <a href="index.html"><img src="geral/img/logo/logo branca.png" alt="Tech Nexus"
             class="footer__logo-img logo__light"></a>
@@ -188,7 +204,6 @@
         </div>
       </div>
 
-      <!-- Institucional -->
       <div class="footer__column">
         <h3>INSTITUCIONAL</h3>
         <ul>
@@ -202,7 +217,6 @@
         </ul>
       </div>
 
-      <!-- Atendimento + pagamentos -->
       <div class="footer__column">
         <h3>ATENDIMENTO</h3>
         <p><i class="ri-phone-fill"></i> (61) XXXXX-XXXX</p>
@@ -233,7 +247,6 @@
   <script src="geral/js/gsap.js"></script>
   <script type="module" src="geral/js/supabase.js"></script>
   <script type="module" src="geral/js/auth.js"></script>
-  <script type="module" src="geral/js/ui.js"></script>
   <script type="module" src="geral/js/cart.js"></script>
   <script type="module" src="geral/js/products.js"></script>
   <script type="module" src="geral/js/main.js"></script>

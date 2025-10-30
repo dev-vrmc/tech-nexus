@@ -321,3 +321,55 @@ if (document.querySelector(".section__login")) {
     { autoAlpha: 1, scale: 1, duration: 1.5, delay: 0.2, ease: "elastic.out(1, 0.5)" } // FINAL
   );
 }
+
+
+const imageModalOverlay = document.querySelector("#image-modal-overlay");
+
+// 2. SÓ CRIA A TIMELINE SE O MODAL EXISTIR NESTA PÁGINA
+if (imageModalOverlay) {
+  const imageModalContent = document.querySelector("#modal-image-content");
+  const imageModalClose = document.querySelector("#image-modal-close");
+
+  // 3. Cria a timeline (pausada por padrão)
+  const imageModalTimeline = gsap.timeline({
+    paused: true,
+    // Define o que acontece quando a animação reverte (fecha)
+    onReverseComplete: () => {
+      // Limpa a imagem para evitar "flash" na próxima abertura
+      if (imageModalContent) {
+        imageModalContent.src = "";
+      }
+    }
+  });
+
+  // 4. Adiciona as animações à timeline
+  if (imageModalContent && imageModalClose) {
+    imageModalTimeline
+      // Define o estado INICIAL (GSAP agora controla isso)
+      .set(imageModalOverlay, { autoAlpha: 0 }) 
+      .set(imageModalContent, { scale: 0.8 })
+      .set(imageModalClose, { autoAlpha: 0 })
+
+      // Animação de Abertura (o .play())
+      .to(imageModalOverlay, { // 1. Fade in do fundo
+        duration: 0.3,
+        autoAlpha: 1, // autoAlpha = opacity: 1, visibility: visible
+        ease: "power2.out"
+      }, 0) // "0" significa "comece no segundo 0"
+      
+      .to(imageModalContent, { // 2. Scale up da imagem
+        duration: 0.4,
+        scale: 1,
+        ease: "cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+      }, 0.1) // Começa 0.1s após o início
+      
+      .to(imageModalClose, { // 3. Fade in do botão 'X'
+        duration: 0.3,
+        autoAlpha: 1,
+        ease: "power2.out"
+      }, 0.2); // Começa 0.2s após o início
+  }
+
+  // 5. Anexa a timeline ao 'window' para ser acessível globalmente
+  window.imageModalTimeline = imageModalTimeline;
+}
