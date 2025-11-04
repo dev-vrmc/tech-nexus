@@ -74,6 +74,7 @@ class AuthManager {
                     full_name: name,
                     phone: phone,
                 },
+                emailRedirectTo: `${window.location.origin}/login.html`,
             },
         });
 
