@@ -3,6 +3,11 @@
 import { supabase } from './supabase.js';
 import { showToast } from './ui.js';
 
+const origin = window.location.origin;
+const basePath = window.location.hostname.includes('github.io')
+    ? '/tech-nexus'
+    : '';
+
 class AuthManager {
     constructor() {
         this.currentUser = null;
@@ -74,7 +79,7 @@ class AuthManager {
                     full_name: name,
                     phone: phone,
                 },
-                emailRedirectTo: `${window.location.origin}/login.html`,
+                emailRedirectTo: `${origin}${basePath}/login.html`,
             },
         });
 
@@ -124,17 +129,17 @@ class AuthManager {
         window.location.href = 'index.html';
     }
 
-    async resetPassword(email) {
+async resetPassword(email) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/password-reset.html`,
+            // --- MODIFICADO ---
+            redirectTo: `${origin}${basePath}/password-reset.html`,
         });
 
         if (error) {
             showToast(error.message, 'error');
             return false;
         }
-
-        return true; // ✅ **MODIFICADO: Retorna 'true' em caso de sucesso
+        return true;
     }
 
     async uploadAvatar(file) {
@@ -153,12 +158,10 @@ class AuthManager {
             throw uploadError;
         }
 
-        // Get public URL of the uploaded file
         const { data } = supabase.storage
             .from('avatars')
             .getPublicUrl(filePath);
 
-        // Update user's profile with the new avatar URL
         const { error: updateError } = await supabase
             .from('profiles')
             .update({ avatar_url: data.publicUrl })
