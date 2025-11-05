@@ -1,20 +1,9 @@
-/* ==============================================
-   ARQUIVO: geral/js/gsap.js (VERSÃO CORRIGIDA COM fromTo)
-   Animações seguras, sem "saltos" e sem alterar CSS
-==============================================
-*/
 
-// Registra o plugin ScrollTrigger
 gsap.registerPlugin(ScrollTrigger);
-
-/* ==============================================
-   1. ANIMAÇÕES GLOBAIS (Toda Página)
-==============================================
-*/
 
 // Animação de entrada do Header
 gsap.fromTo(".header",
-  { y: -60, autoAlpha: 0 }, // Estado INICIAL
+  { y: -60, autoAlpha: 0 }, 
   { y: 0, autoAlpha: 1, duration: 0.8, delay: 0.1, ease: "power2.out" } // Estado FINAL
 );
 
@@ -357,19 +346,36 @@ if (imageModalOverlay) {
         ease: "power2.out"
       }, 0) // "0" significa "comece no segundo 0"
       
-      .to(imageModalContent, { // 2. Scale up da imagem
+      .to(imageModalContent, {
         duration: 0.4,
         scale: 1,
         ease: "cubic-bezier(0.175, 0.885, 0.32, 1.275)"
-      }, 0.1) // Começa 0.1s após o início
+      }, 0.1) 
       
-      .to(imageModalClose, { // 3. Fade in do botão 'X'
+      .to(imageModalClose, { 
         duration: 0.3,
         autoAlpha: 1,
         ease: "power2.out"
-      }, 0.2); // Começa 0.2s após o início
+      }, 0.2); 
   }
 
-  // 5. Anexa a timeline ao 'window' para ser acessível globalmente
   window.imageModalTimeline = imageModalTimeline;
 }
+
+if (window.innerWidth <= 768) {
+  const header = document.querySelector(".header");
+  const logo = document.querySelector(".nav__logo");
+
+  window.addEventListener("scroll", () => {
+    const scrollY = window.scrollY;
+    const limit = 100; 
+
+    const progress = Math.min(scrollY / limit, 1);
+
+    header.style.transform = `translateY(${-60 * progress}px)`;
+
+    logo.style.opacity = 1 - progress;
+    logo.style.transform = `translateY(${-20 * progress}px)`;
+  });
+}
+

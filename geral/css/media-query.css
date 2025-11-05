@@ -1,9 +1,7 @@
 /* ==========================================================
-   HEADER RESPONSIVO — 1PI
-   Versão otimizada para mobile, tablet e desktop
+   HEADER RESPONSIVO 
    ========================================================== */
 
-/* BASE AJUSTES GERAIS */
 .header {
   backdrop-filter: blur(8px);
   background-color: var(--container-color);
@@ -82,7 +80,6 @@
   }
 }
 
-/* 🔧 Correção de altura para telas menores */
 @media (max-height: 750px) {
   .section__login {
     height: auto;
@@ -97,7 +94,6 @@
 
   .information-image {
     width: 400px;
-    /* reduz imagens grandes */
   }
 
   .line__hr {
@@ -116,7 +112,6 @@
 
   .password-field {
     flex-direction: column;
-    /* evita o botão de toggle subir */
   }
 
   .toggle-password {
@@ -264,6 +259,10 @@
   .nav__logo {
     width: 150px;
   }
+  
+  .search-container {
+    margin-top: 0px;
+  }
 
   .search__btn {
     padding: 6px;
@@ -296,7 +295,7 @@
   }
 
   main {
-    margin-top: 150px;
+    margin-top: 148px;
   }
 }
 
