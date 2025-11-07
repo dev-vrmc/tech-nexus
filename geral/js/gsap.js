@@ -362,20 +362,41 @@ if (imageModalOverlay) {
   window.imageModalTimeline = imageModalTimeline;
 }
 
-if (window.innerWidth <= 768) {
-  const header = document.querySelector(".header");
-  const logo = document.querySelector(".nav__logo");
+function mobileHeaderScroll() {
+const header = document.querySelector(".header");
+const logo = document.querySelector(".nav__logo");
+let scrollActive = false;
 
-  window.addEventListener("scroll", () => {
-    const scrollY = window.scrollY;
-    const limit = 100; 
+function handleScroll() {
+  const scrollY = window.scrollY;
+  const limit = 100;
+  const progress = Math.min(scrollY / limit, 1);
 
-    const progress = Math.min(scrollY / limit, 1);
-
-    header.style.transform = `translateY(${-60 * progress}px)`;
-
-    logo.style.opacity = 1 - progress;
-    logo.style.transform = `translateY(${-20 * progress}px)`;
-  });
+  header.style.transform = `translateY(${-60 * progress}px)`;
+  logo.style.opacity = 1 - progress;
+  logo.style.transform = `translateY(${-20 * progress}px)`;
 }
 
+function checkViewport() {
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile && !scrollActive) {
+    // ativa animação no mobile
+    window.addEventListener("scroll", handleScroll);
+    scrollActive = true;
+  } else if (!isMobile && scrollActive) {
+    // desativa e limpa tudo no desktop
+    window.removeEventListener("scroll", handleScroll);
+    scrollActive = false;
+
+    header.style.transform = "";
+    logo.style.opacity = "";
+    logo.style.transform = "";
+  }
+}
+
+window.addEventListener("load", checkViewport);
+window.addEventListener("resize", checkViewport);
+}
+
+mobileHeaderScroll();   

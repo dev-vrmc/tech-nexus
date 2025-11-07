@@ -1,8 +1,6 @@
-// Arquivo: geral/js/ui.js
-
 import { cart } from './cart.js';
-import { authManager } from './auth.js'; // Importa o authManager
-import { productManager } from './products.js'; // Importa para a função de delete
+import { authManager } from './auth.js'; 
+import { productManager } from './products.js';
 
 export function showToast(message, type = 'success') {
     const toast = document.createElement('div');

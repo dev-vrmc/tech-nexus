@@ -120,25 +120,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Abre o modal ao clicar na imagem
             reviewsContainer.addEventListener('click', (e) => {
+                // A classe 'admin-review-image' é definida em loadReviews()
                 if (e.target.classList.contains('admin-review-image')) {
                     modalImg.src = e.target.src;
 
-                    // Verifica se a timeline GSAP existe e a executa
-                    if (window.imageModalTimeline) {
-                        window.imageModalTimeline.play();
-                    } else {
-                        imageModal.classList.add('show'); // Fallback caso GSAP falhe
-                    }
+                    // MODIFICADO: Remove a lógica GSAP e usa apenas classList.add,
+                    // idêntico ao funcionamento do item.js
+                    imageModal.classList.add('show');
                 }
             });
 
             // Função unificada para fechar o modal
             const closeImageModal = () => {
-                if (window.imageModalTimeline) {
-                    window.imageModalTimeline.reverse(); // Reverte a animação
-                } else {
-                    imageModal.classList.remove('show'); // Fallback
-                }
+                // MODIFICADO: Remove a lógica GSAP e usa apenas classList.remove
+                imageModal.classList.remove('show');
             };
 
             // Fecha o modal ao clicar no 'X'
@@ -151,10 +146,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         }
-        // ===============================================
-        // FIM: LÓGICA DO MODAL DE VISUALIZAÇÃO DE IMAGEM
-        // ===============================================
-
 
     } catch (authError) {
         showToast('Erro de autenticação.', 'error');

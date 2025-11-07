@@ -121,7 +121,7 @@
             <p>Frete: <span id="cart-shipping">R$ 0,00</span></p>
             <p class="grand-total">Total: <span id="cart-total">R$ 0,00</span></p>
 
-            <button id="checkout-btn" class="button">Finalizar Compra</button>
+            <button id="checkout-btn" class="button" href="#">Finalizar Compra</button>
           </div>
         </div>
       </div>
@@ -303,8 +303,8 @@ Obrigado!
         const shippingInfo = { cep: cep, price: shippingPrice, address: data };
         sessionStorage.setItem('shippingInfo', JSON.stringify(shippingInfo));
         showToast(toastMessage, 'success');
-        cart.renderCartPage(); 
-        renderShippingDetails(); 
+        cart.renderCartPage();
+        renderShippingDetails();
       } catch (error) {
         showToast('Erro ao buscar CEP. Tente novamente.', 'error');
       } finally {
@@ -323,6 +323,13 @@ Obrigado!
         document.getElementById('whatsapp-share-btn').href = whatsappUrl;
         document.getElementById('cart-content').style.display = 'none';
         document.getElementById('order-confirmation').style.display = 'flex';
+
+        // ===============================================
+        // 🔥 SOLUÇÃO: Adicione esta linha abaixo
+        // ===============================================
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // ===============================================
+
         showToast('Pedido registrado com sucesso!', 'success');
         cart.clearCart();
         sessionStorage.removeItem('shippingInfo');
@@ -391,7 +398,7 @@ Obrigado!
       // ===============================================
 
       window.addEventListener('cartUpdated', () => {
-        renderShippingDetails(); 
+        renderShippingDetails();
       });
 
       if (cartContent) {
@@ -400,11 +407,11 @@ Obrigado!
         cartContent.addEventListener('click', (e) => {
           const target = e.target;
           const idElement = target.closest('[data-id]');
-          if (!idElement) return; 
+          if (!idElement) return;
 
           // 🔥 CORREÇÃO: Removido o parseInt. O ID agora é uma STRING.
           const id = idElement.dataset.id;
-          
+
           // Ação: Botão REMOVER
           if (target.closest('.cart-item-remove')) {
             e.preventDefault();
@@ -435,11 +442,11 @@ Obrigado!
         cartContent.addEventListener('change', (e) => {
           const target = e.target;
           if (target.classList.contains('cart-item-quantity')) {
-            
+
             // 🔥 CORREÇÃO: Removido o parseInt do ID.
             const id = target.dataset.id;
             const quantity = parseInt(target.value, 10);
-            
+
             // A verificação de 'quantity' continua, mas a de 'id' é removida
             if (isNaN(quantity)) return;
 
