@@ -1,7 +1,6 @@
 @charset "UTF-8";
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400..900&family=Roboto+Slab:wght@100..900&family=Tektur:wght@400..900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400..900&family=Roboto+Slab:wght@100..900&display=swap");
-@import url('https://fonts.googleapis.com/css2?family=Audiowide&family=Tektur:wght@400..900&display=swap');
 
 :root {
   --header-height: 3.5rem;
@@ -39,7 +38,7 @@
 
   /* === Fonte === */
   --body-font: "Orbitron", sans-serif;
-  --title-font: "Audiowide", sans-serif;
+  --title-font: "Tektur", sans-serif;
 
   /* === Tamanhos de fonte === */
   --h1-font-size: 1.5rem;
@@ -3951,3 +3950,4 @@ label {
   color: var(--first-color);
   transform: rotate(90deg);
 }
+
