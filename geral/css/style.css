@@ -356,13 +356,13 @@ main {
   padding: 10px;
   gap: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: -color 0.2s ease;
   color: inherit;
   text-decoration: none;
 }
 
 .search-result-item:hover {
-  background-color: var(--body-color);
+  -color: var(--body-color);
 }
 
 .search-result-item:not(:last-child) {
@@ -374,7 +374,7 @@ main {
   height: 50px;
   object-fit: contain;
   border-radius: 6px;
-  background-color: var(--body-color);
+  -color: var(--body-color);
 }
 
 .search-result-item .info h4 {
@@ -402,14 +402,14 @@ main {
   gap: 10px;
   padding: 10px 16px;
   border-radius: 30px;
-  background: rgba(255, 255, 255, 0.08);
+  : rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
   transition: all 0.3s ease;
 }
 
 .search__btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  : rgba(255, 255, 255, 0.15);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
 }
 
@@ -432,7 +432,7 @@ main {
 }
 
 #input-search {
-  background: none;
+  : none;
   border: none;
   outline: none;
   color: var(--text-color);
@@ -503,7 +503,7 @@ main {
 
 .cart-badge {
   font-size: 10px;
-  background: linear-gradient(
+  : linear-gradient(
     90deg,
     var(--first-color-light),
     var(--first-color)
@@ -524,14 +524,14 @@ main {
 .hr__category {
   width: 1000px;
   height: 2px;
-  background-color: var(--first-color);
+  -color: var(--first-color);
   margin-bottom: 20px;
 }
 
 .hr__category {
   width: 700px;
   height: 2px;
-  background-color: var(--first-color);
+  -color: var(--first-color);
   margin-bottom: 20px;
 }
 
@@ -540,7 +540,7 @@ main {
   width: 8px;
   height: 8px;
   margin-bottom: 20px;
-  background-color: var(--first-color);
+  -color: var(--first-color);
   transform: rotate(45deg);
 }
 
@@ -548,7 +548,7 @@ main {
 
 .progress-bar {
   height: 2px;
-  background-color: var(--first-color);
+  -color: var(--first-color);
   width: 0%;
   transition: width 0.25s ease-out;
   bottom: 0;
@@ -561,14 +561,14 @@ main {
   position: fixed;
   left: 1rem;
   bottom: -60px;
-  background-color: var(--container-color);
+  -color: var(--container-color);
   filter: grayscale(0.1) contrast(1.1);
   display: inline-flex;
   padding: 10px;
   font-size: 2rem;
   color: var(--first-color);
   z-index: 10;
-  transition: bottom 0.4s, transform 0.4s, background-color 0.4s;
+  transition: bottom 0.4s, transform 0.4s, -color 0.4s;
   border-radius: 50%;
 }
 
@@ -583,7 +583,7 @@ main {
 
 /* LOGIN */
 
-.background-login {
+.-login {
   position: fixed;
   top: 0;
   left: 0;
@@ -591,14 +591,14 @@ main {
   height: 100vh;
   overflow: hidden;
   z-index: -1;
-  background-color: black;
+  -color: black;
 }
 
-.background-login video {
+.-login video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(4px) brightness(0.4);
+  filter: blur(4px) brightness(0.8);
 }
 
 .section__login {
@@ -624,16 +624,16 @@ main {
 
 .span {
   color: transparent;
-  background: linear-gradient(
+  : linear-gradient(
     to right,
     var(--first-color),
     var(--first-color-alt),
     var(--first-color-light),
     var(--first-color-alt)
   );
-  background-size: 200%;
-  background-clip: text;
-  -webkit-background-clip: text;
+  -size: 200%;
+  -clip: text;
+  -webkit--clip: text;
   /* necessário para funcionar em WebKit */
   -webkit-text-fill-color: transparent;
   /* necessário para WebKit */
@@ -643,7 +643,7 @@ main {
 
 @keyframes lineAnimation {
   to {
-    background-position: 200%;
+    -position: 200%;
   }
 }
 
@@ -3950,4 +3950,5 @@ label {
   color: var(--first-color);
   transform: rotate(90deg);
 }
+
 
