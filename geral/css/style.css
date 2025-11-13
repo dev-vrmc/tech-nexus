@@ -356,13 +356,13 @@ main {
   padding: 10px;
   gap: 12px;
   cursor: pointer;
-  transition: -color 0.2s ease;
+  transition: background-color 0.2s ease;
   color: inherit;
   text-decoration: none;
 }
 
 .search-result-item:hover {
-  -color: var(--body-color);
+  background-color: var(--body-color);
 }
 
 .search-result-item:not(:last-child) {
@@ -374,7 +374,7 @@ main {
   height: 50px;
   object-fit: contain;
   border-radius: 6px;
-  -color: var(--body-color);
+  background-color: var(--body-color);
 }
 
 .search-result-item .info h4 {
@@ -524,14 +524,14 @@ main {
 .hr__category {
   width: 1000px;
   height: 2px;
-  -color: var(--first-color);
+  background-color: var(--first-color);
   margin-bottom: 20px;
 }
 
 .hr__category {
   width: 700px;
   height: 2px;
-  -color: var(--first-color);
+  background-color: var(--first-color);
   margin-bottom: 20px;
 }
 
@@ -540,7 +540,7 @@ main {
   width: 8px;
   height: 8px;
   margin-bottom: 20px;
-  -color: var(--first-color);
+  background-color: var(--first-color);
   transform: rotate(45deg);
 }
 
@@ -548,7 +548,7 @@ main {
 
 .progress-bar {
   height: 2px;
-  -color: var(--first-color);
+  background-color: var(--first-color);
   width: 0%;
   transition: width 0.25s ease-out;
   bottom: 0;
@@ -561,14 +561,14 @@ main {
   position: fixed;
   left: 1rem;
   bottom: -60px;
-  -color: var(--container-color);
+  background-color: var(--container-color);
   filter: grayscale(0.1) contrast(1.1);
   display: inline-flex;
   padding: 10px;
   font-size: 2rem;
   color: var(--first-color);
   z-index: 10;
-  transition: bottom 0.4s, transform 0.4s, -color 0.4s;
+  transition: bottom 0.4s, transform 0.4s, background-color 0.4s;
   border-radius: 50%;
 }
 
@@ -583,7 +583,7 @@ main {
 
 /* LOGIN */
 
-.-login {
+.background-login {
   position: fixed;
   top: 0;
   left: 0;
@@ -591,14 +591,14 @@ main {
   height: 100vh;
   overflow: hidden;
   z-index: -1;
-  -color: black;
+  background-color: black;
 }
 
-.-login video {
+.background-login video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(4px) brightness(0.8);
+  filter: blur(4px) brightness(0.4);
 }
 
 .section__login {
@@ -624,16 +624,16 @@ main {
 
 .span {
   color: transparent;
-  background: (
+  background: linear-gradient(
     to right,
     var(--first-color),
     var(--first-color-alt),
     var(--first-color-light),
     var(--first-color-alt)
   );
-  -size: 200%;
-  -clip: text;
-  -webkit--clip: text;
+  background-size: 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
   /* necessário para funcionar em WebKit */
   -webkit-text-fill-color: transparent;
   /* necessário para WebKit */
@@ -643,7 +643,7 @@ main {
 
 @keyframes lineAnimation {
   to {
-    -position: 200%;
+    background-position: 200%;
   }
 }
 
