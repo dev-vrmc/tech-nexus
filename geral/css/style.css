@@ -402,14 +402,14 @@ main {
   gap: 10px;
   padding: 10px 16px;
   border-radius: 30px;
-  : rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
   transition: all 0.3s ease;
 }
 
 .search__btn:hover {
-  : rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
 }
 
@@ -432,7 +432,7 @@ main {
 }
 
 #input-search {
-  : none;
+  background: none;
   border: none;
   outline: none;
   color: var(--text-color);
@@ -503,7 +503,7 @@ main {
 
 .cart-badge {
   font-size: 10px;
-  : linear-gradient(
+  background: linear-gradient(
     90deg,
     var(--first-color-light),
     var(--first-color)
@@ -624,7 +624,7 @@ main {
 
 .span {
   color: transparent;
-  : linear-gradient(
+  background: (
     to right,
     var(--first-color),
     var(--first-color-alt),
@@ -3950,5 +3950,3 @@ label {
   color: var(--first-color);
   transform: rotate(90deg);
 }
-
-
