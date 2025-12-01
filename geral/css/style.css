@@ -3950,3 +3950,50 @@ label {
   color: var(--first-color);
   transform: rotate(90deg);
 }
+
+.image-preview-wrapper {
+    position: relative;
+    display: inline-block;
+    margin: 6px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.image-preview-wrapper img {
+    display: block;
+    max-width: 140px; /* ajuste se quiser */
+    border-radius: 12px;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: 7px;
+    left: 6px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+/* Hover do botão – suave e moderno */
+.remove-image-btn:hover {
+    background: var(--container-color);
+    transform: scale(1.1);
+}
+
+/* Efeito discreto ao passar o mouse na imagem */
+.image-preview-wrapper:hover img {
+    filter: brightness(0.85);
+    transition: 0.2s ease;
+}
