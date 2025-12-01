@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const modalImg = document.getElementById('modal-image-content');
         const imageModalCloseBtn = document.getElementById('image-modal-close');
 
-        if (user) {
+if (user) {
             reviewForm.style.display = 'flex';
             reviewNotice.style.display = 'none';
 
@@ -303,23 +303,148 @@ document.addEventListener('DOMContentLoaded', async () => {
                 wishlistBtn.classList.remove('ri-heart-line');
             }
 
-            const imageUploadInput = document.getElementById('review-images-upload');
+const imageUploadInput = document.getElementById('review-images-upload');
             const imagePreviewContainer = document.getElementById('review-images-preview');
+            
+            // ARRAY PARA ARMAZENAR AS IMAGENS TEMPORARIAMENTE
+            let storedReviewFiles = []; 
 
-            imageUploadInput.addEventListener('change', () => {
-                imagePreviewContainer.innerHTML = '';
-                const files = Array.from(imageUploadInput.files);
-                files.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const img = document.createElement('img');
-                        img.src = reader.result;
-                        // MODIFICADO: Adiciona a classe 'review-image-preview' para o listener funcionar
-                        img.classList.add('review-image-preview');
-                        imagePreviewContainer.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
+            if (imageUploadInput) {
+                // Função para renderizar as imagens acumuladas
+                const updateImagePreviews = () => {
+                    imagePreviewContainer.innerHTML = ''; // Limpa visualização
+                    
+                    storedReviewFiles.forEach((file, index) => {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            // Cria um wrapper (div) para conter a imagem e o botão
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'image-preview-wrapper';
+
+                            const img = document.createElement('img');
+                            img.src = reader.result;
+                            img.classList.add('review-image-preview'); // Classe CSS ajustada
+
+                            // Cria o botão de remover
+                            const removeBtn = document.createElement('button');
+                            removeBtn.innerHTML = '×';
+                            removeBtn.className = 'remove-image-btn';
+                            removeBtn.type = 'button'; // Importante para não submeter o form
+                            
+                            // Ação de remover
+                            removeBtn.onclick = () => {
+                                storedReviewFiles.splice(index, 1); // Remove do array
+                                updateImagePreviews(); // Re-renderiza
+                            };
+
+                            wrapper.appendChild(img);
+                            wrapper.appendChild(removeBtn);
+                            imagePreviewContainer.appendChild(wrapper);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                };
+
+                // Listener de CHANGE (Adicionar novas fotos sem perder as antigas)
+                imageUploadInput.addEventListener('change', () => {
+                    const newFiles = Array.from(imageUploadInput.files);
+                    // Adiciona os novos arquivos ao nosso array acumulador
+                    storedReviewFiles = storedReviewFiles.concat(newFiles);
+                    
+                    updateImagePreviews();
+                    
+                    // Limpa o input HTML para permitir selecionar a mesma foto novamente se quiser
+                    imageUploadInput.value = ''; 
                 });
+            }
+
+            // Listener para ENVIAR ou ATUALIZAR avaliação
+            reviewForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!user) return;
+
+                const ratingInput = reviewForm.querySelector('input[name="rating"]:checked');
+                const comment = document.getElementById('review-comment').value;
+
+                // 1. Validação das Estrelas
+                if (!ratingInput) {
+                    showToast('Por favor, selecione uma nota de 1 a 5 estrelas.', 'error');
+                    return;
+                }
+                // 2. Validação do Comentário
+                if (!comment || comment.trim() === '') {
+                    showToast('Por favor, escreva um comentário para sua avaliação.', 'error');
+                    return;
+                }
+
+                const rating = ratingInput.value;
+                showLoader();
+
+                const reviewIdToUpdate = reviewEditIdInput.value;
+
+                try {
+                    if (reviewIdToUpdate) {
+                        // ... (LÓGICA DE ATUALIZAÇÃO - MANTENHA IGUAL AO SEU CÓDIGO ORIGINAL) ...
+                        // Nota: Se você permite adicionar fotos na edição, precisaria adaptar aqui também, 
+                        // mas vou focar na lógica principal que você pediu.
+                         showAdminConfirmModal('Tem certeza que deseja atualizar esta avaliação?', async () => {
+                             // ... (copie a logica interna do seu update aqui)
+                             // Ao final do sucesso do update, limpe o array:
+                             storedReviewFiles = []; 
+                         });
+                         hideLoader();
+                    } else {
+                        // --- MODO DE INSERÇÃO (MODIFICADO) ---
+                        
+                        // IMPORTANTE: Agora usamos 'storedReviewFiles' em vez do input direto
+                        const files = storedReviewFiles; 
+                        
+                        const imageUrls = [];
+                        const uploadPromises = files.map(async (file) => {
+                            const fileName = `${user.id}/${productId}/${Date.now()}-${file.name}`;
+                            const { error: uploadError } = await supabase.storage
+                                .from('review-images')
+                                .upload(fileName, file);
+                            
+                            if (uploadError) {
+                                throw new Error(`Falha no upload de ${file.name}: ${uploadError.message}`);
+                            }
+                            const { data } = supabase.storage.from('review-images').getPublicUrl(fileName);
+                            return data.publicUrl;
+                        });
+
+                        const uploadedUrls = await Promise.all(uploadPromises);
+                        imageUrls.push(...uploadedUrls);
+
+                        const { error: insertError } = await supabase.from('reviews').insert({
+                            product_id: productId,
+                            user_id: user.id,
+                            rating,
+                            comment,
+                            image_urls: imageUrls.length > 0 ? imageUrls : null,
+                        });
+
+                        if (insertError) throw insertError;
+                        showToast('Avaliação enviada com sucesso!');
+
+                        // Limpa o formulário e recarrega
+                        reviewForm.reset();
+                        reviewEditIdInput.value = '';
+                        reviewSubmitBtn.textContent = originalBtnText;
+                        
+                        // LIMPA NOSSO ARRAY E O PREVIEW
+                        storedReviewFiles = [];
+                        document.getElementById('review-images-preview').innerHTML = '';
+
+                        await fetchAndRenderReviews(productId, user.id, isAdmin);
+                        const updatedProduct = await productManager.getProductById(productId);
+                        if (updatedProduct) renderRating(updatedProduct);
+                    }
+                } catch (error) {
+                    showToast(`Erro: ${error.message}`, 'error');
+                } finally {
+                    if (!reviewIdToUpdate) hideLoader();
+                }
             });
 
             // Listener para ENVIAR ou ATUALIZAR avaliação
