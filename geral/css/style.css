@@ -3967,8 +3967,8 @@ label {
 
 .remove-image-btn {
     position: absolute;
-    top: 7px;
-    left: 6px;
+    top: 6px;
+    right: 6px;
     width: 24px;
     height: 24px;
     border: none;
@@ -3986,13 +3986,11 @@ label {
     transition: background 0.2s ease, transform 0.2s ease;
 }
 
-/* Hover do botão – suave e moderno */
 .remove-image-btn:hover {
     background: var(--container-color);
     transform: scale(1.1);
 }
 
-/* Efeito discreto ao passar o mouse na imagem */
 .image-preview-wrapper:hover img {
     filter: brightness(0.85);
     transition: 0.2s ease;
