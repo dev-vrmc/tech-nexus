@@ -2582,7 +2582,7 @@ label {
 #accountForm input:focus {
   outline: none;
   border-color: var(--first-color);
-  box-shadow: 0 0 0 2px rgba(214, 21, 21, 0.3);
+  box-shadow: 0 0 0 2px var(--shadow-color);
 }
 
 #accountForm input[readonly] {
@@ -2803,6 +2803,7 @@ label {
   color: var(--text-color, #333);
   margin-bottom: 0.6rem;
   line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
 .review-card footer {
@@ -3019,6 +3020,7 @@ label {
   display: flex;
   gap: 10px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .review-card-images img {

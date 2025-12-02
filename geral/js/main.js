@@ -168,7 +168,7 @@ const initThemeToggle = () => {
 };
 
 /*=============== BARRA DE PROGRESSO ===============*/
-const initProgressBar = () => {
+/* const initProgressBar = () => {
     const progressBar = document.querySelector(".progress-bar");
     if (!progressBar) return;
 
@@ -178,7 +178,7 @@ const initProgressBar = () => {
         const scrollPercent = (scrollTop / docHeight) * 100;
         progressBar.style.width = `${scrollPercent}%`;
     });
-};
+}; */
 
 /*=============== SCROLL UP ===============*/
 const initScrollUp = () => {

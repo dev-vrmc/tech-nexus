@@ -64,6 +64,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const avatarUploadInput = document.getElementById('avatarUpload');
     const searchCepBtn = document.getElementById('search-cep-btn');
 
+    // Pega todos os inputs que são ativados/desativados pelo modo de edição
+    const formInputs = accountForm.querySelectorAll('input[type="text"], input[type="tel"]');
+
+    // Adiciona um ouvinte de clique a CADA um desses inputs
+    formInputs.forEach(input => {
+        input.addEventListener('click', () => {
+            // Se o botão "Editar" estiver visível (ou seja, modo "readonly" ativo)
+            if (editBtn.style.display !== 'none') {
+                // Apenas move o foco para o botão "Editar"
+                editBtn.focus();
+            }
+        });
+    });
+    
     // Popula o email (que não muda)
     emailInput.value = user.email;
 
@@ -177,5 +191,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    hideLoader(); 
+    hideLoader();
 });
