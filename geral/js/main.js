@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchBar();
     initMobileMenu();
     initThemeToggle();
-    initProgressBar();
+/*     initProgressBar(); */
     initScrollUp();
     updateCartBadge();
 });
