@@ -94,6 +94,10 @@ body.dark-theme {
   margin: 0;
 }
 
+*, *::before, *::after {
+  caret-color: transparent !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -126,6 +130,7 @@ button,
 textarea {
   border: none;
   outline: none;
+  caret-color: auto !important;
 }
 
 h1,

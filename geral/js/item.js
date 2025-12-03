@@ -168,10 +168,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('desc').textContent = product.description;
     document.getElementById('price').textContent = `R$ ${Number(product.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     document.getElementById('installments').textContent = product.installments || '';
-    document.getElementById('stock').textContent = `Estoque: ${product.stock || 0}`;
+    // --- LÓGICA DE ESTOQUE ATUALIZADA ---
+    const stockCount = product.stock || 0;
+    document.getElementById('stock').textContent = `Estoque: ${stockCount}`;
 
     const buyBtn = document.getElementById('buyBtn');
-    if (buyBtn) buyBtn.addEventListener('click', () => cart.addToCart(product));
+    
+    if (buyBtn) {
+      if (stockCount <= 0) {
+        buyBtn.textContent = 'Fora de Estoque'; 
+        buyBtn.disabled = true;                
+        buyBtn.style.background = 'var(--container-color)';   
+        buyBtn.style.color = 'var(--text-color)';            
+        buyBtn.style.cursor = 'not-allowed';    
+        buyBtn.style.border = '1px solid #999'; 
+      } else {
+        buyBtn.addEventListener('click', () => cart.addToCart(product));
+      }
+    }
 
     const user = await authManager.getCurrentUser();
     let isAdmin = false;

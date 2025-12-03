@@ -1,5 +1,6 @@
 // Arquivo: geral/js/cart.js
 import { showToast, updateCartBadge } from './ui.js';
+import { productManager } from './products.js'; // <-- NOVA IMPORTAÇÃO: Para verificar o estoque
 
 class Cart {
     constructor() {
@@ -16,12 +17,39 @@ class Cart {
     }
 
     addToCart(product, quantity = 1) {
+        // ATENÇÃO: É ESSENCIAL que o objeto 'product' contenha a propriedade 'stock'
+        // com a quantidade atual em estoque, fornecida pela função que chama este método.
+
         // Garante que o ID do produto seja uma string ANTES de ser salvo
         const productId = String(product.id);
         const existingItem = this.cart.find(item => String(item.id) === productId);
 
+        const currentCartQty = existingItem ? existingItem.quantity : 0;
+        const requestedTotalQty = currentCartQty + quantity;
+
+        // --- 🔒 VERIFICAÇÃO DE ESTOQUE NO ADD TO CART ---
+        if (product.stock !== undefined && requestedTotalQty > product.stock) {
+            const currentStock = product.stock;
+            let message = `Estoque insuficiente para ${product.name}.`;
+            
+            if (currentCartQty > 0) {
+                 const limit = currentStock - currentCartQty;
+                 if (limit > 0) {
+                     message += ` Você já tem ${currentCartQty} no carrinho. Pode adicionar no máximo mais ${limit} unidade(s).`;
+                 } else {
+                     message += ` Você já atingiu o limite de estoque (${currentStock}) no carrinho.`;
+                 }
+            } else {
+                message += ` O limite é de ${currentStock} unidade(s).`;
+            }
+
+            showToast(message, 'error');
+            return; // Impede a adição
+        }
+        // ------------------------------------------------
+
         if (existingItem) {
-            existingItem.quantity += quantity;
+            existingItem.quantity = requestedTotalQty;
         } else {
             // Salva o ID como string
             this.cart.push({ ...product, id: productId, quantity });
@@ -44,7 +72,7 @@ class Cart {
         }
     }
 
-    updateQuantity(productId, quantity) {
+    async updateQuantity(productId, quantity) { // <-- FUNÇÃO AGORA É ASYNC
         // 🔥 CORREÇÃO: Força a comparação de STRING para STRING
         const productIdStr = String(productId);
         const item = this.cart.find(item => String(item.id) === productIdStr);
@@ -53,6 +81,27 @@ class Cart {
             if (quantity <= 0) {
                 this.removeFromCart(productIdStr); // Passa a string
             } else {
+                // --- 🔒 VERIFICAÇÃO DE ESTOQUE NO UPDATE QUANTITY ---
+                // Busca o estoque atualizado do produto
+                const productData = await productManager.getProductById(productIdStr);
+                const currentStock = productData?.stock;
+                
+                if (currentStock !== undefined && quantity > currentStock) {
+                    showToast(`A quantidade máxima disponível em estoque para ${item.name} é ${currentStock}.`, 'error');
+                    
+                    // Ajusta a quantidade para o máximo permitido
+                    item.quantity = currentStock; 
+                    
+                    this.saveCart(); 
+                    if (window.location.pathname.includes('cart.html')) {
+                        // Força a atualização do DOM para refletir a correção da quantidade
+                        this.renderCartPage(); 
+                    }
+                    return; 
+                }
+                // -----------------------------------------------------
+
+                // Se passou na verificação
                 item.quantity = quantity;
                 this.saveCart(); 
                 
