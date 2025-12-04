@@ -135,7 +135,7 @@
     <main class="admin-content">
 
       <section id="admin-dashboard-stats-section" class="admin-section active">
-        <h1>📊 Dashboard</h1>
+        <h1>📶 Dashboard</h1>
         <div class="admin-stats-grid">
           <div class="stat-card">
             <h3>Faturamento Total</h3>
@@ -158,7 +158,20 @@
             <i class="ri-database-2-line"></i>
           </div>
         </div>
+        <div class="chart-wrapper">
+          <div class="chart-header">
+            <h2><i class="ri-pulse-line"></i> Performance Semanal</h2>
+            <span class="live-badge">AO VIVO</span>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
       </section>
+
+      <p class="chart-warning">
+        O gráfico analítico só está disponível para telas maiores que 500 pixels.
+      </p>
 
       <section id="admin-orders-section" class="admin-section">
         <h1>📦 Pedidos</h1>
@@ -329,6 +342,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="geral/js/gsap.js"></script>
   <script type="module" src="geral/js/supabase.js"></script>
   <script type="module" src="geral/js/auth.js"></script>
