@@ -2456,7 +2456,7 @@ label {
 /* === GRID DE ESTATÍSTICAS === */
 .admin-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
@@ -4114,4 +4114,5 @@ label {
         opacity: 1;
         transform: translateY(0);
     }
+
 }
