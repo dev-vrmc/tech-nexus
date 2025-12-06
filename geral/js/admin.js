@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Proteção da Rota
         await authManager.getCurrentUser();
-        const profile = await authManager.fetchUserProfile();
+        // ESTE OBJETO JÁ TEM O ID DO USUÁRIO LOGADO!
+        const profile = await authManager.fetchUserProfile(); 
 
         if (!profile || profile.role !== 'admin') {
             alert('Acesso negado. Você precisa ser um administrador.');
@@ -32,6 +33,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadOrders(),
             loadReviews()
         ]);
+        
+        // **1. Obter a URL da foto, usando o ID do perfil para filtrar**
+        const { data: profilesData, error: photoError } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            // FILTRO ADICIONADO: Garante que você pega apenas o seu registro
+            .eq('id', profile.id) 
+            .maybeSingle(); // Usa maybeSingle para evitar o erro 406 caso não exista perfil
+
+        if (photoError) {
+             console.error("Erro ao buscar avatar:", photoError);
+             // Não para a execução, mas avisa sobre o problema da foto
+        }
+
+        const avatarUrl = profilesData?.avatar_url; 
+
+        // **2. Encontrar o elemento <img> e atualizar o src**
+        const imgElement = document.getElementById('profile-photo');
+
+        if (imgElement && avatarUrl) {
+            // Altera o atributo 'src' para o link do Supabase
+            imgElement.src = avatarUrl;
+        }
+
 
         // Lógica de navegação da barra lateral
         setupSidebarNavigation();
