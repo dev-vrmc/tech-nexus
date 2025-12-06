@@ -9,15 +9,12 @@ import { showToast, showLoader, hideLoader } from './ui.js';
 const categoryMapById = { 1: 'hardware', 2: 'perifericos', 3: 'computadores', 4: 'cadeiras', 5: 'monitores', 6: 'celulares' };
 const categoryMapBySlug = { 'hardware': 1, 'perifericos': 2, 'computadores': 3, 'cadeiras': 4, 'monitores': 5, 'celulares': 6 };
 
-let dashboardChartInstance = null;
-
 document.addEventListener('DOMContentLoaded', async () => {
     showLoader();
     try {
         // Proteção da Rota
         await authManager.getCurrentUser();
-        // ESTE OBJETO JÁ TEM O ID DO USUÁRIO LOGADO!
-        const profile = await authManager.fetchUserProfile(); 
+        const profile = await authManager.fetchUserProfile();
 
         if (!profile || profile.role !== 'admin') {
             alert('Acesso negado. Você precisa ser um administrador.');
@@ -28,35 +25,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Carrega todos os dados assincronamente
         await Promise.all([
             loadDashboardStats(),
-            loadRevenueChart(),
             loadProducts(),
             loadOrders(),
-            loadReviews()
+            loadReviews() // Carrega as avaliações
         ]);
-        
-        // **1. Obter a URL da foto, usando o ID do perfil para filtrar**
-        const { data: profilesData, error: photoError } = await supabase
-            .from('profiles')
-            .select('avatar_url')
-            // FILTRO ADICIONADO: Garante que você pega apenas o seu registro
-            .eq('id', profile.id) 
-            .maybeSingle(); // Usa maybeSingle para evitar o erro 406 caso não exista perfil
-
-        if (photoError) {
-             console.error("Erro ao buscar avatar:", photoError);
-             // Não para a execução, mas avisa sobre o problema da foto
-        }
-
-        const avatarUrl = profilesData?.avatar_url; 
-
-        // **2. Encontrar o elemento <img> e atualizar o src**
-        const imgElement = document.getElementById('profile-photo');
-
-        if (imgElement && avatarUrl) {
-            // Altera o atributo 'src' para o link do Supabase
-            imgElement.src = avatarUrl;
-        }
-
 
         // Lógica de navegação da barra lateral
         setupSidebarNavigation();
@@ -632,215 +604,4 @@ async function handleDeleteReview(id) {
             hideLoader();
         }
     });
-}
-
-// =======================================================
-// GRÁFICO SINISTRO: PERFORMANCE SEMANAL (REESCRITO E MELHORADO)
-// =======================================================
-async function loadRevenueChart() {
-    const ctx = document.getElementById('revenueChart');
-    if (!ctx) return;
-
-    try {
-        // 1. Calcular datas e buscar dados
-        const dates = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            dates.push(d.toISOString().split('T')[0]);
-        }
-
-        const startDate = dates[0];
-        const endDate = new Date().toISOString();
-
-        const { data: orders, error } = await supabase
-            .from('orders')
-            .select('created_at, total')
-            .gte('created_at', `${startDate}T00:00:00`)
-            .lte('created_at', endDate)
-            .neq('status', 'canceled');
-
-        if (error) throw error;
-
-        // 2. Processar dados (Agrupar por dia)
-        // RESTAURADO: Inicializa mapa com zeros, incluindo 'count' (pedidos)
-        const statsMap = dates.reduce((acc, date) => {
-            acc[date] = { revenue: 0, count: 0 };
-            return acc;
-        }, {});
-
-        orders.forEach(order => {
-            const dateKey = order.created_at.split('T')[0];
-            if (statsMap[dateKey]) {
-                statsMap[dateKey].revenue += Number(order.total);
-                statsMap[dateKey].count += 1; // RESTAURADO: Contagem de pedidos
-            }
-        });
-
-        const labels = dates.map(date => {
-            const [y, m, d] = date.split('-');
-            return `${d}/${m}`;
-        });
-        const revenueData = dates.map(d => statsMap[d].revenue);
-        const orderCountData = dates.map(d => statsMap[d].count); // RESTAURADO: Dados de pedidos
-
-        // 3. Obter cores dinamicamente
-        const firstColor = '#7a00ff';
-        const firstColorAlt = '#c29bff';
-        const textColor = '#797979ff';
-        const containerColor = '#2d2d44';
-
-        // Cor das Linhas Réguas (Grid)
-        const gridColor = 'gray';
-        const subtleGridColor = 'grey'; // Cor para o grid secundário
-
-        // 4. Configurar Dados e Estilos
-        const chartContext = ctx.getContext('2d');
-        const gradient = chartContext.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(122, 0, 255, 0.2)');
-        gradient.addColorStop(1, 'rgba(122, 0, 255, 0)');
-
-        const data = {
-            labels: labels,
-            datasets: [
-                // Receita (Faturamento) - Linha principal
-                {
-                    label: ' Faturamento (R$)',
-                    data: revenueData,
-                    type: 'line',
-                    borderColor: firstColor,
-                    borderWidth: 3,
-                    backgroundColor: gradient,
-                    fill: 'origin',
-                    tension: 0.4, // Curva suave
-                    pointRadius: 5,
-                    pointBackgroundColor: firstColor,
-                    pointHoverRadius: 8,
-                    pointHoverBackgroundColor: '#fff',
-                    yAxisID: 'y',
-                },
-                // RESTAURADO: Qtd. Pedidos - Linha tracejada secundária
-                {
-                    label: ' Qtd. Pedidos',
-                    data: orderCountData,
-                    type: 'line',
-                    borderColor: firstColorAlt,
-                    borderWidth: 2,
-                    borderDash: [5, 5], // Tracejado
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointBackgroundColor: firstColorAlt,
-                    pointHoverRadius: 7,
-                    pointHoverBackgroundColor: firstColor,
-                    fill: false,
-                    yAxisID: 'y1' // Eixo Y secundário
-                }
-            ]
-        };
-
-        if (dashboardChartInstance) {
-            dashboardChartInstance.destroy();
-        }
-
-        dashboardChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                plugins: {
-                    legend: {
-                        padding: 20, // espaço geral da legenda
-                        labels: {
-                            color: textColor,
-                            font: { family: 'Orbitron' },
-                            padding: 20 // espaço entre os quadradinhos
-                        }
-                    },
-                    tooltip: {
-                        // MELHORIA DA MENSAGENZINHA (TOOLTIP)
-                        backgroundColor: containerColor,
-                        titleColor: firstColorAlt,
-                        bodyColor: textColor,
-                        borderColor: firstColor,
-                        borderWidth: 2,
-                        cornerRadius: 8,
-                        padding: 12,
-                        titleFont: {
-                            family: 'Tektur',
-                            weight: 'bold',
-                            size: 14
-                        },
-                        bodyFont: {
-                            family: 'Orbitron',
-                            size: 12
-                        },
-                        caretSize: 8,
-
-                        callbacks: {
-                            title: function (context) {
-                                // Mostra a data como título
-                                return context[0].label;
-                            },
-                            label: function (context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.dataset.yAxisID === 'y') {
-                                    // Faturamento (Eixo Esquerdo)
-                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
-                                } else if (context.dataset.yAxisID === 'y1') {
-                                    // Qtd. Pedidos (Eixo Direito)
-                                    label += context.raw;
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: gridColor,
-                            lineWidth: 0.5,
-                            drawBorder: false,
-                        },
-                        ticks: { color: textColor, font: { family: 'Orbitron', size: 10 } }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        grid: {
-                            color: gridColor,
-                            lineWidth: 0.5,
-                            drawBorder: false,
-                        },
-                        ticks: { color: textColor, font: { family: 'Orbitron' } }
-                    },
-                    // RESTAURADO: Eixo y1 para quantidade de pedidos
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: true,
-                            color: subtleGridColor, // Réguas secundárias mais suaves
-                            lineWidth: 0.2,
-                        },
-                        ticks: { color: textColor, stepSize: 1 }
-                    }
-                }
-            }
-        });
-
-    } catch (err) {
-        console.error('Erro ao carregar gráfico:', err);
-        showToast('Erro ao carregar gráfico de desempenho.', 'error');
-    }
 }

@@ -1,17 +1,9 @@
 // Arquivo: geral/js/cart.js
 import { showToast, updateCartBadge } from './ui.js';
-import { productManager } from './products.js';
 
 class Cart {
     constructor() {
-        // CORREÇÃO: Verifica se o dado salvo é realmente um Array. Se não for (ou der erro), inicia como []
-        try {
-            const stored = JSON.parse(localStorage.getItem('shoppingCart'));
-            this.cart = Array.isArray(stored) ? stored : [];
-        } catch (e) {
-            console.warn('Carrinho corrompido resetado:', e);
-            this.cart = [];
-        }
+        this.cart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
     }
 
     getCart() {
@@ -24,36 +16,14 @@ class Cart {
     }
 
     addToCart(product, quantity = 1) {
-        // Garante que o ID seja string
+        // Garante que o ID do produto seja uma string ANTES de ser salvo
         const productId = String(product.id);
         const existingItem = this.cart.find(item => String(item.id) === productId);
 
-        const currentCartQty = existingItem ? existingItem.quantity : 0;
-        const requestedTotalQty = currentCartQty + quantity;
-
-        // Verificação de estoque
-        if (product.stock !== undefined && requestedTotalQty > product.stock) {
-            const currentStock = product.stock;
-            let message = `Estoque insuficiente para ${product.name}.`;
-            
-            if (currentCartQty > 0) {
-                 const limit = currentStock - currentCartQty;
-                 if (limit > 0) {
-                     message += ` Você já tem ${currentCartQty} no carrinho. Pode adicionar no máximo mais ${limit} unidade(s).`;
-                 } else {
-                     message += ` Você já atingiu o limite de estoque (${currentStock}) no carrinho.`;
-                 }
-            } else {
-                message += ` O limite é de ${currentStock} unidade(s).`;
-            }
-
-            showToast(message, 'error');
-            return;
-        }
-
         if (existingItem) {
-            existingItem.quantity = requestedTotalQty;
+            existingItem.quantity += quantity;
         } else {
+            // Salva o ID como string
             this.cart.push({ ...product, id: productId, quantity });
         }
 
@@ -62,6 +32,7 @@ class Cart {
     }
 
     removeFromCart(productId) {
+        // 🔥 CORREÇÃO: Força a comparação de STRING para STRING
         const productIdStr = String(productId);
         this.cart = this.cart.filter(item => String(item.id) !== productIdStr);
         
@@ -73,27 +44,15 @@ class Cart {
         }
     }
 
-    async updateQuantity(productId, quantity) {
+    updateQuantity(productId, quantity) {
+        // 🔥 CORREÇÃO: Força a comparação de STRING para STRING
         const productIdStr = String(productId);
         const item = this.cart.find(item => String(item.id) === productIdStr);
         
         if (item) {
             if (quantity <= 0) {
-                this.removeFromCart(productIdStr);
+                this.removeFromCart(productIdStr); // Passa a string
             } else {
-                const productData = await productManager.getProductById(productIdStr);
-                const currentStock = productData?.stock;
-                
-                if (currentStock !== undefined && quantity > currentStock) {
-                    showToast(`A quantidade máxima disponível em estoque para ${item.name} é ${currentStock}.`, 'error');
-                    item.quantity = currentStock; 
-                    this.saveCart(); 
-                    if (window.location.pathname.includes('cart.html')) {
-                        this.renderCartPage(); 
-                    }
-                    return; 
-                }
-
                 item.quantity = quantity;
                 this.saveCart(); 
                 
@@ -140,11 +99,15 @@ class Cart {
         } else {
             itemsContainer.innerHTML = this.cart.map(item => `
                 <div class="cart-item">
+                    
                     <a href="item.html?id=${item.id}">
                         <img src="${item.img || 'geral/img/logo/simbolo.png'}" alt="${item.name}" class="cart-item-image">
                     </a>
+
                     <div class="cart-item-details">
+                        
                         <h4><a href="item.html?id=${item.id}" class="cart-item-link">${item.name}</a></h4>
+                        
                         <p class="cart-item-price">${formatCurrency(item.price)}</p>
                         <div class="cart-item-actions">
                             <div class="quantity-wrapper">

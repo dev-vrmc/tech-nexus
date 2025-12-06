@@ -94,10 +94,6 @@ body.dark-theme {
   margin: 0;
 }
 
-*, *::before, *::after {
-  caret-color: transparent !important;
-}
-
 html {
   scroll-behavior: smooth;
 }
@@ -130,7 +126,6 @@ button,
 textarea {
   border: none;
   outline: none;
-  caret-color: auto !important;
 }
 
 h1,
@@ -169,11 +164,6 @@ img {
 main {
   margin-top: 138px;
   min-height: 100vh;
-}
-
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
 }
 
 /*HEADEEEEEEEER*/
@@ -1811,15 +1801,6 @@ label {
   padding-bottom: 0.5rem;
 }
 
-#profile-photo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--first-color);
-  box-shadow: 0 0 12px var(--first-color-light);
-}
-
 /* ===================
    ADMIN ORDERS
 =================== */
@@ -2464,7 +2445,7 @@ label {
 /* === GRID DE ESTATÍSTICAS === */
 .admin-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
 }
 
@@ -3384,12 +3365,11 @@ label {
 }
 
 .totals-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--shadow-color);
-  gap: 0px;
+  gap: 20px;
 }
 
 .totals-container p {
@@ -3397,7 +3377,6 @@ label {
 }
 
 .totals-container .grand-total {
-  margin-bottom: 20px;
   font-size: var(--h2-font-size);
   font-weight: 700;
   color: var(--title-color);
@@ -3945,27 +3924,16 @@ label {
   place-items: center;
 }
 
-#image-modal-overlay {
-    position: fixed; 
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center; 
-    align-items: center; 
-    overflow: auto; 
-    background: rgba(0, 0, 0, 0.9);
-    z-index: 1000;
-    pointer-events: none; 
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    overflow-x: hidden;
-}
+#modal-image-content {
+  max-width: 95%;
+  max-height: 95%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 
-#image-modal-overlay.show {
-    opacity: 1;
-    pointer-events: all; 
+  cursor: default;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
 }
 
 #image-modal-close {
@@ -4028,109 +3996,4 @@ label {
 .image-preview-wrapper:hover img {
     filter: brightness(0.85);
     transition: 0.2s ease;
-}
-
-/* =========================================
-   GRÁFICO SINISTRO DASHBOARD (Cyberpunk HUD)
-   ========================================= */
-
-.chart-wrapper {
-  margin-top: 2rem;
-  background: var(--container-color);
-  border: 1px solid rgba(122, 0, 255, 0.2); /* Borda roxa sutil */
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Efeito de brilho no topo */
-.chart-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--first-color), transparent);
-  opacity: 0.8;
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.chart-header h2 {
-  font-size: 1.2rem;
-  color: var(--title-color);
-  font-family: var(--title-font);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Badge piscando "AO VIVO" */
-.live-badge {
-  font-size: 0.75rem;
-  background: rgba(39, 174, 96, 0.2);
-  color: #2ecc71;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #2ecc71;
-  font-family: var(--body-font);
-  font-weight: 700;
-  animation: pulse-live 2s infinite;
-}
-
-@keyframes pulse-live {
-  0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
-}
-
-.chart-container-box {
-  position: relative;
-  height: 400px;
-  width: 100%;
-  word-wrap: auto;
-}
-
-.chart-warning {
-    display: none;
-    text-align: center;
-    font-size: 1rem;
-    color: var(--title-color);
-    margin: 1.2rem auto 0;
-    padding: 0.8rem 1rem;
-
-    /* Estilo Cyber Bonito */
-    background: var(--container-color); 
-    border: 1px solid var(--first-color);
-    border-radius: 8px;
-
-    width: fit-content;
-    max-width: 90%;
-
-    backdrop-filter: blur(6px);
-    box-shadow: 0 0 10px var(--first-color);
-    font-family: 'Orbitron', sans-serif;
-
-    letter-spacing: 1px;
-    animation: fade-in 0.4s ease-out;
-}
-
-/* Suave */
-@keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }

@@ -1130,12 +1130,3 @@
     padding: 6px 10px !important;
   }
 }
-
-@media (max-width: 500px) {
-    .chart-wrapper {
-        display: none;
-    }
-    .chart-warning {
-        display: block;
-    }
-}

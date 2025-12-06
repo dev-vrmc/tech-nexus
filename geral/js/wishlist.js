@@ -40,7 +40,7 @@ class WishlistManager {
             .select('id')
             .eq('user_id', user.id)
             .eq('product_id', productId)
-            .maybeSingle();
+            .single();
             
         return !error && data;
     }
