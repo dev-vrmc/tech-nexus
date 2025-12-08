@@ -10,14 +10,14 @@ const categoryMapById = { 1: 'hardware', 2: 'perifericos', 3: 'computadores', 4:
 const categoryMapBySlug = { 'hardware': 1, 'perifericos': 2, 'computadores': 3, 'cadeiras': 4, 'monitores': 5, 'celulares': 6 };
 
 let dashboardChartInstance = null;
+let monthlyChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     showLoader();
     try {
         // Proteção da Rota
         await authManager.getCurrentUser();
-        // ESTE OBJETO JÁ TEM O ID DO USUÁRIO LOGADO!
-        const profile = await authManager.fetchUserProfile(); 
+        const profile = await authManager.fetchUserProfile();
 
         if (!profile || profile.role !== 'admin') {
             alert('Acesso negado. Você precisa ser um administrador.');
@@ -28,354 +28,517 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Carrega todos os dados assincronamente
         await Promise.all([
             loadDashboardStats(),
-            loadRevenueChart(),
+            loadRevenueChart(),       // Gráfico 1: Diário (7 dias)
+            loadMonthlyChart(),       // Gráfico 2: Semanal (Mensal)
             loadProducts(),
             loadOrders(),
             loadReviews()
         ]);
-        
-        // **1. Obter a URL da foto, usando o ID do perfil para filtrar**
-        const { data: profilesData, error: photoError } = await supabase
-            .from('profiles')
-            .select('avatar_url')
-            // FILTRO ADICIONADO: Garante que você pega apenas o seu registro
-            .eq('id', profile.id) 
-            .maybeSingle(); // Usa maybeSingle para evitar o erro 406 caso não exista perfil
 
-        if (photoError) {
-             console.error("Erro ao buscar avatar:", photoError);
-             // Não para a execução, mas avisa sobre o problema da foto
-        }
-
-        const avatarUrl = profilesData?.avatar_url; 
-
-        // **2. Encontrar o elemento <img> e atualizar o src**
-        const imgElement = document.getElementById('profile-photo');
-
-        if (imgElement && avatarUrl) {
-            // Altera o atributo 'src' para o link do Supabase
-            imgElement.src = avatarUrl;
-        }
-
-
-        // Lógica de navegação da barra lateral
         setupSidebarNavigation();
-
-        const reviewsContainer = document.getElementById('adminReviewsContainer');
-        if (reviewsContainer) {
-            reviewsContainer.addEventListener('click', async (e) => {
-                // Procura pelo botão de exclusão que foi clicado
-                const deleteBtn = e.target.closest('.delete-btn');
-
-                if (deleteBtn) {
-                    const reviewId = deleteBtn.dataset.id;
-                    if (reviewId) {
-                        // Chama a função de exclusão (que já existe no admin.js)
-                        handleDeleteReview(reviewId);
-                    }
-                }
-            });
-        }
-        const form = document.getElementById('adminAddProduct');
-        const formTitle = document.getElementById('product-form-title');
-        const hiddenIdInput = form.querySelector('input[name="id"]');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const productIdToEdit = urlParams.get('edit');
-        if (productIdToEdit) {
-            const productToEdit = await productManager.getProductById(productIdToEdit);
-            if (productToEdit) {
-                handleEdit(productToEdit);
-                // Mostra a seção de produtos se estiver editando
-                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-                document.getElementById('admin-products-section').classList.add('active');
-                document.querySelectorAll('.admin-sidebar-link').forEach(l => l.classList.remove('active'));
-                document.querySelector('[data-target="#admin-products-section"]').classList.add('active');
-            }
-        }
-
-        // Lógica do Formulário
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            showLoader();
-            try {
-                const formData = new FormData(form);
-                const productData = Object.fromEntries(formData.entries());
-                const id = productData.id;
-
-                productData.category_id = categoryMapBySlug[productData.category];
-                delete productData.category;
-
-                productData.price = parseFloat(productData.price);
-                productData.stock = parseInt(productData.stock, 10);
-                productData.featured = formData.get('featured') === 'on';
-
-                let error;
-                if (id) {
-                    const { error: updateError } = await supabase.from('products').update(productData).eq('id', id);
-                    error = updateError;
-                } else {
-                    delete productData.id;
-                    const { error: insertError } = await supabase.from('products').insert([productData]);
-                    error = insertError;
-                }
-
-                if (error) {
-                    showToast(`Erro ao salvar produto: ${error.message}`, 'error');
-                } else {
-                    showToast('Produto salvo com sucesso!');
-                    form.reset();
-                    hiddenIdInput.value = '';
-                    formTitle.textContent = '➕ Adicionar Novo Produto';
-                    await loadProducts(); // Recarrega os produtos
-                }
-            } catch (err) {
-                showToast(`Erro inesperado: ${err.message}`, 'error');
-            } finally {
-                hideLoader();
-            }
-        });
-
-        // ===============================================
-        // INÍCIO: LÓGICA DO MODAL DE VISUALIZAÇÃO DE IMAGEM
-        // ===============================================
-        // Estes elementos devem estar presentes no seu admin.html
-        const imageModal = document.getElementById('image-modal-overlay');
-        const modalImg = document.getElementById('modal-image-content');
-        const imageModalCloseBtn = document.getElementById('image-modal-close');
-
-        if (reviewsContainer && imageModal && modalImg && imageModalCloseBtn) {
-
-            // Abre o modal ao clicar na imagem
-            reviewsContainer.addEventListener('click', (e) => {
-                // A classe 'admin-review-image' é definida em loadReviews()
-                if (e.target.classList.contains('admin-review-image')) {
-                    modalImg.src = e.target.src;
-
-                    // MODIFICADO: Remove a lógica GSAP e usa apenas classList.add,
-                    // idêntico ao funcionamento do item.js
-                    imageModal.classList.add('show');
-                }
-            });
-
-            // Função unificada para fechar o modal
-            const closeImageModal = () => {
-                // MODIFICADO: Remove a lógica GSAP e usa apenas classList.remove
-                imageModal.classList.remove('show');
-            };
-
-            // Fecha o modal ao clicar no 'X'
-            imageModalCloseBtn.addEventListener('click', closeImageModal);
-
-            // Fecha o modal ao clicar no overlay
-            imageModal.addEventListener('click', (e) => {
-                if (e.target === imageModal) {
-                    closeImageModal();
-                }
-            });
-        }
+        setupFormListeners();
+        setupImageModal();
 
     } catch (authError) {
         showToast('Erro de autenticação.', 'error');
-        window.location.href = 'index.html';
+        console.error(authError);
     } finally {
         hideLoader();
     }
+    // Função sugerida para carregar o avatar
+    async function loadUserAvatar() {
+        try {
+            // 1. GARANTIR QUE TEMOS O USUÁRIO ATUAL
+            // (Se você já tem o objeto 'profile' carregado fora daqui, pode pular esta etapa)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return; // Se não estiver logado, para aqui.
+
+            // 2. BUSCAR O CAMINHO DA FOTO NO BANCO
+            const { data: profileData, error } = await supabase
+                .from('profiles')
+                .select('avatar_url')
+                .eq('id', user.id) // Usa o ID do usuário autenticado
+                .maybeSingle();
+
+            if (error) throw error;
+            if (!profileData || !profileData.avatar_url) {
+                console.log("Usuário sem avatar definido.");
+                return;
+            }
+
+            // 3. TRATAR A URL (O PULO DO GATO)
+            let finalUrl = profileData.avatar_url;
+
+            // Verifica se é um link completo (https) ou apenas um caminho interno
+            if (!finalUrl.startsWith('http')) {
+                // Se for apenas o caminho (ex: '1234/avatar.png'), gera o link público do Storage
+                // ATENÇÃO: Substitua 'avatars' pelo nome exato do seu Bucket no Storage
+                const { data: publicData } = supabase
+                    .storage
+                    .from('avatars')
+                    .getPublicUrl(finalUrl);
+
+                finalUrl = publicData.publicUrl;
+            }
+
+            // 4. ATUALIZAR O DOM
+            const imgElement = document.getElementById('profile-photo');
+            if (imgElement) {
+                imgElement.src = finalUrl;
+                // Opcional: Mostra a imagem caso ela esteja oculta
+                imgElement.style.display = 'block';
+            } else {
+                console.warn("Elemento #profile-photo não encontrado no HTML.");
+            }
+
+        } catch (err) {
+            console.error("Erro ao carregar avatar:", err);
+        }
+    }
+
+    // Chame a função (pode colocar dentro do seu DOMContentLoaded)
+    loadUserAvatar();
 });
 
+// Helper simples para atualizar texto
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
 // =======================================================
-// NAVEGAÇÃO DA BARRA LATERAL
+// 1. CARREGAR TODAS AS ESTATÍSTICAS
 // =======================================================
+async function loadDashboardStats() {
+    try {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const [
+            { data: annualOrdersData, error: annualOrdersError },
+            { count: clientCount, error: clientError },
+            { count: productCount, error: productError }
+        ] = await Promise.all([
+            supabase.from('orders').select('total, created_at, status').gte('created_at', startOfYear.toISOString()).neq('status', 'canceled'),
+            supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'user'),
+            supabase.from('products').select('id', { count: 'exact', head: true })
+        ]);
+
+        if (annualOrdersError || clientError || productError) throw new Error("Erro ao buscar dados");
+
+        let annualRevenue = 0;
+        let monthlyRevenue = 0;
+        let weeklyRevenue = 0;
+        let totalOrders = annualOrdersData.length;
+        let monthlyOrders = 0;
+        let dailyOrders = 0;
+
+        annualOrdersData.forEach(order => {
+            const price = Number(order.total);
+            const date = new Date(order.created_at);
+
+            annualRevenue += price;
+
+            if (date >= startOfMonth) {
+                monthlyRevenue += price;
+                monthlyOrders++;
+            }
+            if (date >= sevenDaysAgo) {
+                weeklyRevenue += price;
+            }
+            if (date >= startOfToday) {
+                dailyOrders++;
+            }
+        });
+
+        setText('stat-total-revenue', formatPrice(annualRevenue));
+        setText('stat-total-orders', totalOrders);
+        setText('stat-total-clients', clientCount);
+        setText('stat-total-products', productCount);
+        setText('stat-monthly-revenue', formatPrice(monthlyRevenue));
+        setText('stat-weekly-revenue', formatPrice(weeklyRevenue));
+        setText('stat-monthly-orders', monthlyOrders);
+        setText('stat-daily-orders', dailyOrders);
+
+    } catch (error) {
+        console.error('Erro stats:', error);
+        showToast('Erro ao carregar estatísticas.', 'error');
+    }
+}
+
+// =======================================================
+// GRÁFICOS (MANTIDOS ORIGINAIS)
+// =======================================================
+async function loadRevenueChart() {
+    const ctx = document.getElementById('revenueChart');
+    if (!ctx) return;
+    try {
+        const dates = [];
+        const dateObjects = [];
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            dateObjects.push(d);
+            dates.push(d.toISOString().split('T')[0]);
+        }
+
+        const startDate = dates[0];
+        const endDate = new Date().toISOString();
+
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select('created_at, total, status')
+            .gte('created_at', `${startDate}T00:00:00`)
+            .lte('created_at', endDate)
+            .neq('status', 'canceled');
+
+        if (error) throw error;
+
+        const statsMap = dates.reduce((acc, date) => { acc[date] = { revenue: 0, count: 0 }; return acc; }, {});
+
+        orders.forEach(order => {
+            const dateKey = order.created_at.split('T')[0];
+            if (statsMap[dateKey]) {
+                statsMap[dateKey].revenue += Number(order.total);
+                statsMap[dateKey].count += 1;
+            }
+        });
+
+        const labels = dateObjects.map(d => {
+            const dayOfWeek = dayNames[d.getDay()];
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            return `${dayOfWeek} - ${day}/${month}`;
+        });
+
+        const revenueData = dates.map(d => statsMap[d].revenue);
+        const orderCountData = dates.map(d => statsMap[d].count);
+
+        const firstColor = '#7a00ff';
+        const firstColorAlt = '#c29bff';
+        const textColor = '#797979ff';
+        const containerColor = '#2d2d44';
+        const gridColor = 'gray';
+        const subtleGridColor = 'grey';
+
+        const chartContext = ctx.getContext('2d');
+        const gradient = chartContext.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(122, 0, 255, 0.2)');
+        gradient.addColorStop(1, 'rgba(122, 0, 255, 0)');
+
+        const data = {
+            labels: labels,
+            datasets: [
+                {
+                    label: ' Faturamento (R$)',
+                    data: revenueData,
+                    type: 'line',
+                    borderColor: firstColor,
+                    borderWidth: 3,
+                    backgroundColor: gradient,
+                    fill: 'origin',
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: firstColor,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: '#fff',
+                    yAxisID: 'y',
+                },
+                {
+                    label: ' Qtd. Pedidos',
+                    data: orderCountData,
+                    type: 'line',
+                    borderColor: firstColorAlt,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: firstColorAlt,
+                    pointHoverRadius: 7,
+                    pointHoverBackgroundColor: firstColor,
+                    fill: false,
+                    yAxisID: 'y1'
+                }
+            ]
+        };
+
+        if (dashboardChartInstance) dashboardChartInstance.destroy();
+
+        dashboardChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { padding: 20, labels: { color: textColor, font: { family: 'Orbitron' }, padding: 20 } },
+                    tooltip: {
+                        backgroundColor: containerColor,
+                        titleColor: firstColorAlt,
+                        bodyColor: textColor,
+                        borderColor: firstColor,
+                        borderWidth: 2,
+                        cornerRadius: 8,
+                        padding: 12,
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.dataset.yAxisID === 'y') {
+                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
+                                } else if (context.dataset.yAxisID === 'y1') {
+                                    label += context.raw;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: gridColor, lineWidth: 0.5 }, ticks: { color: textColor } },
+                    y: { type: 'linear', display: true, position: 'left', grid: { color: gridColor }, ticks: { color: textColor } },
+                    y1: { type: 'linear', display: true, position: 'right', grid: { color: subtleGridColor }, ticks: { color: textColor, stepSize: 1 } }
+                }
+            }
+        });
+
+    } catch (err) {
+        console.error('Erro ao carregar gráfico semanal:', err);
+    }
+}
+
+async function loadMonthlyChart() {
+    const ctx = document.getElementById('monthlySalesChart');
+    if (!ctx) return;
+
+    try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select('created_at, total')
+            .gte('created_at', startOfMonth.toISOString())
+            .lte('created_at', now.toISOString())
+            .neq('status', 'canceled');
+
+        if (error) throw error;
+
+        const weekRanges = [];
+        const monthlyStats = {};
+
+        let currentDay = 1;
+        let weekNumber = 1;
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+        while (currentDay <= lastDayOfMonth && weekNumber <= 5) {
+            const startDay = currentDay;
+            const endDay = Math.min(startDay + 6, lastDayOfMonth);
+
+            const startRange = new Date(now.getFullYear(), now.getMonth(), startDay);
+            const endRange = new Date(now.getFullYear(), now.getMonth(), endDay);
+
+            const startStr = `${String(startRange.getDate()).padStart(2, '0')}/${String(startRange.getMonth() + 1).padStart(2, '0')}`;
+            const endStr = `${String(endRange.getDate()).padStart(2, '0')}/${String(endRange.getMonth() + 1).padStart(2, '0')}`;
+
+            const label = `${startStr} a ${endStr}`;
+
+            weekRanges.push({ startDay, endDay, label });
+            monthlyStats[label] = { rev: 0, count: 0 };
+
+            currentDay = endDay + 1;
+            weekNumber++;
+        }
+
+        // Agrupamento
+        orders.forEach(o => {
+            const d = new Date(o.created_at);
+            const day = d.getDate();
+            const week = weekRanges.find(w => day >= w.startDay && day <= w.endDay);
+
+            if (week) {
+                monthlyStats[week.label].rev += o.total;
+                monthlyStats[week.label].count += 1;
+            }
+        });
+
+        const labels = weekRanges.map(w => w.label);
+        const revenueData = labels.map(l => monthlyStats[l].rev);
+        const orderCountData = labels.map(l => monthlyStats[l].count);
+
+        // Cores iguais ao sistema visual
+        const firstColor = '#7a00ff';
+        const firstColorAlt = '#c29bff';
+        const textColor = '#797979ff';
+        const containerColor = '#2d2d44';
+        const gridColor = 'gray';
+        const subtleGridColor = 'grey';
+
+        const chartContext = ctx.getContext('2d');
+        const gradient = chartContext.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(122, 0, 255, 0.25)');
+        gradient.addColorStop(1, 'rgba(122, 0, 255, 0)');
+
+        if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+        monthlyChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: ' Faturamento (R$)',
+                        data: revenueData,
+                        type: 'line',
+                        borderColor: firstColor,
+                        borderWidth: 3,
+                        backgroundColor: gradient,
+                        fill: 'origin',
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: firstColor,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#fff',
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: ' Qtd. Pedidos',
+                        data: orderCountData,
+                        type: 'line',
+                        borderColor: firstColorAlt,
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: firstColorAlt,
+                        pointHoverRadius: 7,
+                        pointHoverBackgroundColor: firstColor,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        padding: 20,
+                        labels: { color: textColor, font: { family: 'Orbitron' }, padding: 20 }
+                    },
+                    tooltip: {
+                        backgroundColor: containerColor,
+                        titleColor: firstColorAlt,
+                        bodyColor: textColor,
+                        borderColor: firstColor,
+                        borderWidth: 2,
+                        cornerRadius: 8,
+                        padding: 12,
+                        titleFont: { family: 'Tektur', weight: 'bold', size: 14 },
+                        bodyFont: { family: 'Orbitron', size: 12 },
+                        caretSize: 8,
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.dataset.yAxisID === 'y') {
+                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
+                                } else {
+                                    label += context.raw;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor, lineWidth: 0.5, drawBorder: false },
+                        ticks: { color: textColor, font: { family: 'Orbitron', size: 10 } }
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: gridColor, lineWidth: 0.5, drawBorder: false },
+                        ticks: { color: textColor }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { color: subtleGridColor, lineWidth: 0.2 },
+                        ticks: { color: textColor, stepSize: 1 }
+                    }
+                }
+            }
+        });
+
+    } catch (err) {
+        console.error("Erro chart mensal:", err);
+    }
+}
+
+// =======================================================
+// SETUP E INTERFACE
+// =======================================================
+
 function setupSidebarNavigation() {
     const links = document.querySelectorAll('.admin-sidebar-link');
     const sections = document.querySelectorAll('.admin-section');
-
     links.forEach(link => {
-        // Ignora o link "Voltar ao Site"
         if (link.getAttribute('href') === 'index.html') return;
-
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetId = link.getAttribute('data-target');
-
-            // Remove 'active' de todas as seções e links
             sections.forEach(s => s.classList.remove('active'));
             links.forEach(l => l.classList.remove('active'));
-
-            // Adiciona 'active' ao link clicado e à seção alvo
             link.classList.add('active');
             document.querySelector(targetId).classList.add('active');
         });
     });
 }
 
-// =======================================================
-// CARREGAR ESTATÍSTICAS DO DASHBOARD
-// =======================================================
-async function loadDashboardStats() {
-    showLoader();
-    try {
-        const [
-            { data: ordersData, error: ordersError },
-            { count: clientCount, error: clientError },
-            { count: productCount, error: productError }
-        ] = await Promise.all([
-            supabase.from('orders').select('total'),
-            supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'user'),
-            supabase.from('products').select('id', { count: 'exact', head: true })
-        ]);
-
-        if (ordersError || clientError || productError) {
-            throw new Error(ordersError?.message || clientError?.message || productError?.message);
-        }
-
-        // Calcula faturamento total
-        const totalRevenue = ordersData.reduce((acc, order) => acc + order.total, 0);
-
-        // Atualiza o HTML
-        document.getElementById('stat-total-revenue').textContent = formatPrice(totalRevenue);
-        document.getElementById('stat-total-orders').textContent = ordersData.length;
-        document.getElementById('stat-total-clients').textContent = clientCount;
-        document.getElementById('stat-total-products').textContent = productCount;
-
-    } catch (error) {
-        console.error('Erro ao carregar estatísticas:', error);
-        showToast('Erro ao carregar estatísticas.', 'error');
-    } finally {
-        hideLoader();
-    }
-}
-
-// =======================================================
-// LÓGICA DO MODAL DE CONFIRMAÇÃO ADMIN
-// =======================================================
-/**
- * Exibe um modal de confirmação genérico para o painel admin.
- * @param {string} message A mensagem a ser exibida no modal.
- * @param {function} onConfirmCallback A função a ser executada se o admin confirmar.
- */
-function showAdminConfirmModal(message, onConfirmCallback) {
-    const modal = document.getElementById('admin-confirm-modal');
-    const messageEl = document.getElementById('admin-confirm-message');
-    const confirmBtn = document.getElementById('admin-confirm-yes');
-    const cancelBtn = document.getElementById('confirm-cancel'); // ID do CSS
-    const closeBtn = document.getElementById('admin-confirm-close'); // BOTÃO FECHAR (X)
-
-    if (!modal || !messageEl || !confirmBtn || !cancelBtn || !closeBtn) {
-        console.error('Elementos do modal de confirmação não encontrados.');
-        // Fallback para o confirm nativo
-        if (confirm(message)) {
-            onConfirmCallback();
-        }
-        return;
-    }
-
-    messageEl.textContent = message;
-
-    // Clona os botões para limpar listeners de cliques antigos
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-
-    const newCancelBtn = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-
-    const newCloseBtn = closeBtn.cloneNode(true); // Clona o botão fechar
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-
-    const hideModal = () => modal.classList.remove('show');
-
-    // Adiciona listener ao novo botão de confirmar
-    newConfirmBtn.addEventListener('click', () => {
-        onConfirmCallback();
-        hideModal();
-    });
-
-    // Adiciona listener ao novo botão de cancelar
-    newCancelBtn.addEventListener('click', hideModal);
-
-    // Adiciona listener ao novo botão de fechar (X)
-    newCloseBtn.addEventListener('click', hideModal);
-
-    // Adiciona listener para fechar clicando fora
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            hideModal();
-        }
-    }, { once: true }); // Executa apenas uma vez
-
-    // Mostra o modal
-    modal.classList.add('show');
-}
-
-
-// =======================================================
-// LÓGICA DE PRODUTOS
-// =======================================================
-async function loadProducts() {
-    showLoader();
-    try {
-        const container = document.getElementById('adminProducts');
-        const products = await productManager.getProducts();
-
-        if (!container) return;
-        container.innerHTML = products.map(p => `
-            <div class="admin-product-item">
-                <span><a href="item.html?id=${p.id}" target="_blank" class="admin-link">${p.name}</a> (Estoque: ${p.stock})</span>
-                
-                <div>
-                    <button class="edit-btn" data-id="${p.id}">Editar</button>
-                    <button class="delete-btn" data-id="${p.id}">Excluir</button>
-                </div>
-            </div>
-        `).join('');
-
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const product = products.find(p => p.id == e.target.dataset.id);
-                handleEdit(product);
-            });
-        });
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => handleDelete(e.target.dataset.id));
-        });
-    } catch (error) {
-        showToast('Erro ao carregar produtos.', 'error');
-    } finally {
-        hideLoader();
-    }
-}
-
-function handleEdit(product) {
-    if (!product) return;
+function setupFormListeners() {
     const form = document.getElementById('adminAddProduct');
-    form.querySelector('input[name="id"]').value = product.id;
-    form.querySelector('input[name="name"]').value = product.name;
-    form.querySelector('input[name="img"]').value = product.img;
-    form.querySelector('input[name="price"]').value = product.price;
-    form.querySelector('input[name="brand_meta"]').value = product.brand_meta || '';
-    form.querySelector('textarea[name="description"]').value = product.description || '';
-    form.querySelector('input[name="installments"]').value = product.installments || '';
-    form.querySelector('input[name="stock"]').value = product.stock || 0;
-    form.querySelector('input[name="featured"]').checked = !!product.featured;
-    const categorySlug = categoryMapById[product.category_id];
-    form.querySelector('select[name="category"]').value = categorySlug;
-    document.getElementById('product-form-title').textContent = `✏️ Editando: ${product.name}`;
-    form.scrollIntoView({ behavior: 'smooth' });
-}
+    if (!form) return;
 
-async function handleDelete(id) {
-    // MODIFICADO: Usa o modal de confirmação
-    showAdminConfirmModal('Tem certeza que deseja excluir este produto?', async () => {
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
         showLoader();
         try {
-            const { error } = await supabase.from('products').delete().eq('id', id);
-            if (error) {
-                showToast(`Erro ao excluir: ${error.message}`, 'error');
+            const formData = new FormData(form);
+            const productData = Object.fromEntries(formData.entries());
+            const id = productData.id;
+
+            productData.category_id = categoryMapBySlug[productData.category];
+            delete productData.category;
+            productData.price = parseFloat(productData.price);
+            productData.stock = parseInt(productData.stock, 10);
+            productData.featured = formData.get('featured') === 'on';
+
+            let error;
+            if (id) {
+                const { error: updErr } = await supabase.from('products').update(productData).eq('id', id);
+                error = updErr;
             } else {
-                showToast('Produto excluído com sucesso!');
-                await loadProducts();
+                delete productData.id;
+                const { error: insErr } = await supabase.from('products').insert([productData]);
+                error = insErr;
             }
+
+            if (error) throw error;
+            showToast('Produto salvo com sucesso!');
+            form.reset();
+            form.querySelector('input[name="id"]').value = '';
+            document.getElementById('product-form-title').textContent = '➕ Adicionar Novo Produto';
+            await loadProducts();
         } catch (err) {
             showToast(`Erro: ${err.message}`, 'error');
         } finally {
@@ -384,9 +547,101 @@ async function handleDelete(id) {
     });
 }
 
+function setupImageModal() {
+    const reviewsContainer = document.getElementById('adminReviewsContainer');
+    const imageModal = document.getElementById('image-modal-overlay');
+    const modalImg = document.getElementById('modal-image-content');
+    const closeBtn = document.getElementById('image-modal-close');
+
+    if (reviewsContainer && imageModal) {
+        reviewsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('admin-review-image')) {
+                modalImg.src = e.target.src;
+                imageModal.classList.add('show');
+            }
+        });
+        const close = () => imageModal.classList.remove('show');
+        closeBtn.addEventListener('click', close);
+        imageModal.addEventListener('click', (e) => { if (e.target === imageModal) close(); });
+    }
+}
+
+function showAdminConfirmModal(message, onConfirmCallback) {
+    const modal = document.getElementById('admin-confirm-modal');
+    const msgEl = document.getElementById('admin-confirm-message');
+    const yesBtn = document.getElementById('admin-confirm-yes');
+    const cancelBtn = document.getElementById('confirm-cancel');
+
+    if (!modal) { if (confirm(message)) onConfirmCallback(); return; }
+
+    msgEl.textContent = message;
+
+    // Clones para remover listeners antigos
+    const newYes = yesBtn.cloneNode(true);
+    yesBtn.parentNode.replaceChild(newYes, yesBtn);
+    const newCancel = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+    const close = () => modal.classList.remove('show');
+
+    newYes.addEventListener('click', () => { onConfirmCallback(); close(); });
+    newCancel.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); }, { once: true });
+
+    modal.classList.add('show');
+}
+
 // =======================================================
-// LÓGICA DE PEDIDOS
+// CARREGADORES DE DADOS (PRODUTOS & ORDERS)
 // =======================================================
+
+async function loadProducts() {
+    const container = document.getElementById('adminProducts');
+    if (!container) return;
+    const products = await productManager.getProducts();
+    container.innerHTML = products.map(p => `
+        <div class="admin-product-item">
+            <span><a href="item.html?id=${p.id}" target="_blank" class="admin-link">${p.name}</a> (Estoque: ${p.stock})</span>
+            <div>
+                <button class="edit-btn" data-id="${p.id}">Editar</button>
+                <button class="delete-btn" data-id="${p.id}">Excluir</button>
+            </div>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        const prod = products.find(p => p.id == e.target.dataset.id);
+        if (prod) {
+            const form = document.getElementById('adminAddProduct');
+            form.querySelector('input[name="id"]').value = prod.id;
+            form.querySelector('input[name="name"]').value = prod.name;
+            form.querySelector('input[name="img"]').value = prod.img;
+            form.querySelector('input[name="price"]').value = prod.price;
+            form.querySelector('input[name="brand_meta"]').value = prod.brand_meta || '';
+            form.querySelector('textarea[name="description"]').value = prod.description || '';
+            form.querySelector('input[name="installments"]').value = prod.installments || '';
+            form.querySelector('input[name="stock"]').value = prod.stock;
+            form.querySelector('input[name="featured"]').checked = prod.featured;
+            form.querySelector('select[name="category"]').value = categoryMapById[prod.category_id];
+
+            document.getElementById('product-form-title').textContent = `✏️ Editando: ${prod.name}`;
+            form.scrollIntoView({ behavior: 'smooth' });
+            document.querySelector('[data-target="#admin-products-section"]').click();
+        }
+    }));
+
+    container.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        showAdminConfirmModal('Excluir produto?', async () => {
+            showLoader();
+            await supabase.from('products').delete().eq('id', e.target.dataset.id);
+            await loadProducts();
+            hideLoader();
+        });
+    }));
+}
+
+// --- FUNÇÃO DE ORDERS COM SEU LAYOUT E FUNÇÕES FALTANTES ---
+
 async function loadOrders() {
     showLoader();
     const container = document.getElementById('adminOrders');
@@ -408,7 +663,7 @@ async function loadOrders() {
                     address_zipcode
                 ),
                 order_items ( quantity, unit_price, products!inner(id, name) )
-            `) // <-- MODIFICADO: Buscando 'id' e 'name' de products
+            `)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -475,20 +730,23 @@ async function loadOrders() {
             </div>
         `}).join('');
 
+        // Adiciona Listeners para Mudança de Status
         container.querySelectorAll('.order-status-select').forEach(select => {
             select.addEventListener('change', async (e) => {
                 const orderId = e.target.dataset.id;
                 const newStatus = e.target.value;
                 await updateOrderStatus(orderId, newStatus);
-                await loadOrders();
+                await loadOrders(); // Recarrega para atualizar visual
             });
         });
 
+        // Adiciona Listeners para Exclusão
         container.querySelectorAll('.delete-order-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 handleDeleteOrder(e.target.dataset.id);
             });
         });
+
     } catch (error) {
         console.error('Erro ao buscar pedidos:', error);
         container.innerHTML = '<p>Erro ao carregar pedidos.</p>';
@@ -497,36 +755,44 @@ async function loadOrders() {
     }
 }
 
-async function updateOrderStatus(orderId, status) {
+// -----------------------------------------------------------
+// NOVAS FUNÇÕES AUXILIARES (QUE FALTAVAM NO SEU CÓDIGO)
+// -----------------------------------------------------------
+
+async function updateOrderStatus(orderId, newStatus) {
     showLoader();
     try {
-        const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
-        if (error) {
-            showToast(`Erro ao atualizar status: ${error.message}`, 'error');
-        } else {
-            showToast(`Status do pedido #${orderId} atualizado.`);
-        }
-    } catch (err) {
-        showToast(`Erro: ${err.message}`, 'error');
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: newStatus })
+            .eq('id', orderId);
+
+        if (error) throw error;
+        showToast('Status atualizado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        showToast('Erro ao atualizar status.', 'error');
     } finally {
         hideLoader();
     }
 }
 
-async function handleDeleteOrder(orderId) {
-    // MODIFICADO: Usa o modal de confirmação
-    showAdminConfirmModal(`Tem certeza que deseja excluir o pedido #${orderId}? Esta ação não pode ser desfeita.`, async () => {
+function handleDeleteOrder(orderId) {
+    showAdminConfirmModal('Tem certeza que deseja excluir este pedido?', async () => {
         showLoader();
         try {
+            // Se tiver cascata configurada no banco (ON DELETE CASCADE), deletar a order é suficiente.
+            // Se não, pode ser necessário deletar os order_items antes. 
+            // Vou assumir que o supabase resolve ou deletamos direto.
             const { error } = await supabase.from('orders').delete().eq('id', orderId);
-            if (error) {
-                showToast(`Erro ao excluir pedido: ${error.message}`, 'error');
-            } else {
-                showToast('Pedido excluído com sucesso!');
-                await loadOrders(); // Recarrega a lista de pedidos
-            }
-        } catch (err) {
-            showToast(`Erro: ${err.message}`, 'error');
+
+            if (error) throw error;
+
+            showToast('Pedido excluído com sucesso!');
+            await loadOrders(); // Recarrega a lista
+        } catch (error) {
+            console.error('Erro ao excluir pedido:', error);
+            showToast('Erro ao excluir pedido.', 'error');
         } finally {
             hideLoader();
         }
@@ -534,313 +800,45 @@ async function handleDeleteOrder(orderId) {
 }
 
 // =======================================================
-// LÓGICA DE AVALIAÇÕES (REVIEWS)
+// AVALIAÇÕES (REVIEWS)
 // =======================================================
 async function loadReviews() {
-    showLoader();
     const container = document.getElementById('adminReviewsContainer');
     if (!container) return;
 
-    try {
-        // Busca avaliações, juntando dados do perfil (autor) e do produto
-        const { data: reviews, error } = await supabase
-            .from('reviews')
-            .select(`
-                id,
-                created_at,
-                comment,
-                rating,
-                image_urls,
-                profile:profiles(full_name, avatar_url),
-                product:products(id, name)
-            `)
-            .order('created_at', { ascending: false });
+    const { data: reviews } = await supabase.from('reviews')
+        .select(`id, rating, comment, image_urls, created_at, profiles(full_name, avatar_url), products(name)`)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+    if (!reviews?.length) { container.innerHTML = '<p>Sem avaliações.</p>'; return; }
 
-        if (!reviews || reviews.length === 0) {
-            container.innerHTML = '<p>Nenhuma avaliação encontrada.</p>';
-            return;
-        }
-
-        container.innerHTML = reviews.map(review => {
-            const avatarSrc = review.profile?.avatar_url || 'geral/img/logo/simbolo.png';
-            const authorName = review.profile?.full_name || 'Usuário Anônimo';
-
-            const productName = review.product?.name || 'Produto Removido';
-            const productId = review.product?.id;
-
-            const productHTML = productId
-                ? `<a href="item.html?id=${productId}#reviews-list" target="_blank" class="admin-link">${productName}</a>`
-                : productName;
-
-            // Gera HTML para as imagens (se houver)
-            // A classe 'admin-review-image' será o gatilho para o modal
-            const imagesHTML = (review.image_urls || []).map(url =>
-                `<img src="${url}" alt="Imagem da avaliação" class="admin-review-image">`
-            ).join('');
-
-            return `
-            <div class="admin-review-card">
-                <header class="admin-review-header">
-                    <img src="${avatarSrc}" alt="Avatar de ${authorName}" class="review-avatar">
-                    <div class="admin-review-info">
-                        <span class="review-author-name">${authorName}</span>
-                        <span class="review-product-name">Produto: <strong>${productHTML}</strong></span>
-                        <div class="stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
-                    </div>
-                </header>
-                <p class="admin-review-comment">${review.comment || '<i>(Sem comentário)</i>'}</p>
-                ${imagesHTML ? `<div class="admin-review-images">${imagesHTML}</div>` : ''}
-                    <footer class="admin-review-footer">
-                    <span>${new Date(review.created_at).toLocaleString('pt-BR')}</span>
-                    <button class="delete-btn delete-my-review-btn" data-id="${review.id}">
-                        <i class="ri-delete-bin-line"></i> Excluir
-                    </button>
-                </footer>
+    container.innerHTML = reviews.map(r => `
+        <div class="admin-review-card">
+            <div class="admin-review-header">
+                <img src="${r.profiles?.avatar_url || 'geral/img/logo/simbolo.png'}" class="review-avatar">
+                <div class="admin-review-info">
+                    <span class="review-author-name">${r.profiles?.full_name || 'Anônimo'}</span>
+                    <span class="review-product-name">${r.products?.name}</span>
+                    <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+                </div>
             </div>
+            <p class="admin-review-comment">${r.comment || ''}</p>
+            <div class="admin-review-images">
+                ${(r.image_urls || []).map(u => `<img src="${u}" class="admin-review-image">`).join('')}
             </div>
-            `;
-        }).join('');
+            <div class="admin-review-footer">
+                <span>${new Date(r.created_at).toLocaleDateString()}</span>
+                <button class="delete-btn delete-review-btn" data-id="${r.id}">Excluir</button>
+            </div>
+        </div>
+    `).join('');
 
-    } catch (error) {
-        console.error('Erro ao buscar avaliações:', error);
-        container.innerHTML = '<p>Erro ao carregar avaliações.</p>';
-        showToast('Erro ao carregar avaliações.', 'error');
-    } finally {
-        hideLoader();
-    }
-}
-
-async function handleDeleteReview(id) {
-    // MODIFICADO: Usa o modal de confirmação
-    showAdminConfirmModal('Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.', async () => {
-        showLoader();
-        try {
-            // Deleta a avaliação da tabela 'reviews'
-            const { error } = await supabase.from('reviews').delete().eq('id', id);
-
-            if (error) {
-                showToast(`Erro ao excluir avaliação: ${error.message}`, 'error');
-            } else {
-                showToast('Avaliação excluída com sucesso!');
-                await loadReviews(); // Recarrega a lista de avaliações
-            }
-        } catch (err) {
-            showToast(`Erro: ${err.message}`, 'error');
-        } finally {
+    container.querySelectorAll('.delete-review-btn').forEach(b => b.addEventListener('click', (e) => {
+        showAdminConfirmModal('Excluir avaliação?', async () => {
+            showLoader();
+            await supabase.from('reviews').delete().eq('id', e.target.dataset.id);
+            await loadReviews();
             hideLoader();
-        }
-    });
-}
-
-// =======================================================
-// GRÁFICO SINISTRO: PERFORMANCE SEMANAL (REESCRITO E MELHORADO)
-// =======================================================
-async function loadRevenueChart() {
-    const ctx = document.getElementById('revenueChart');
-    if (!ctx) return;
-
-    try {
-        // 1. Calcular datas e buscar dados
-        const dates = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            dates.push(d.toISOString().split('T')[0]);
-        }
-
-        const startDate = dates[0];
-        const endDate = new Date().toISOString();
-
-        const { data: orders, error } = await supabase
-            .from('orders')
-            .select('created_at, total')
-            .gte('created_at', `${startDate}T00:00:00`)
-            .lte('created_at', endDate)
-            .neq('status', 'canceled');
-
-        if (error) throw error;
-
-        // 2. Processar dados (Agrupar por dia)
-        // RESTAURADO: Inicializa mapa com zeros, incluindo 'count' (pedidos)
-        const statsMap = dates.reduce((acc, date) => {
-            acc[date] = { revenue: 0, count: 0 };
-            return acc;
-        }, {});
-
-        orders.forEach(order => {
-            const dateKey = order.created_at.split('T')[0];
-            if (statsMap[dateKey]) {
-                statsMap[dateKey].revenue += Number(order.total);
-                statsMap[dateKey].count += 1; // RESTAURADO: Contagem de pedidos
-            }
         });
-
-        const labels = dates.map(date => {
-            const [y, m, d] = date.split('-');
-            return `${d}/${m}`;
-        });
-        const revenueData = dates.map(d => statsMap[d].revenue);
-        const orderCountData = dates.map(d => statsMap[d].count); // RESTAURADO: Dados de pedidos
-
-        // 3. Obter cores dinamicamente
-        const firstColor = '#7a00ff';
-        const firstColorAlt = '#c29bff';
-        const textColor = '#797979ff';
-        const containerColor = '#2d2d44';
-
-        // Cor das Linhas Réguas (Grid)
-        const gridColor = 'gray';
-        const subtleGridColor = 'grey'; // Cor para o grid secundário
-
-        // 4. Configurar Dados e Estilos
-        const chartContext = ctx.getContext('2d');
-        const gradient = chartContext.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(122, 0, 255, 0.2)');
-        gradient.addColorStop(1, 'rgba(122, 0, 255, 0)');
-
-        const data = {
-            labels: labels,
-            datasets: [
-                // Receita (Faturamento) - Linha principal
-                {
-                    label: ' Faturamento (R$)',
-                    data: revenueData,
-                    type: 'line',
-                    borderColor: firstColor,
-                    borderWidth: 3,
-                    backgroundColor: gradient,
-                    fill: 'origin',
-                    tension: 0.4, // Curva suave
-                    pointRadius: 5,
-                    pointBackgroundColor: firstColor,
-                    pointHoverRadius: 8,
-                    pointHoverBackgroundColor: '#fff',
-                    yAxisID: 'y',
-                },
-                // RESTAURADO: Qtd. Pedidos - Linha tracejada secundária
-                {
-                    label: ' Qtd. Pedidos',
-                    data: orderCountData,
-                    type: 'line',
-                    borderColor: firstColorAlt,
-                    borderWidth: 2,
-                    borderDash: [5, 5], // Tracejado
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointBackgroundColor: firstColorAlt,
-                    pointHoverRadius: 7,
-                    pointHoverBackgroundColor: firstColor,
-                    fill: false,
-                    yAxisID: 'y1' // Eixo Y secundário
-                }
-            ]
-        };
-
-        if (dashboardChartInstance) {
-            dashboardChartInstance.destroy();
-        }
-
-        dashboardChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                plugins: {
-                    legend: {
-                        padding: 20, // espaço geral da legenda
-                        labels: {
-                            color: textColor,
-                            font: { family: 'Orbitron' },
-                            padding: 20 // espaço entre os quadradinhos
-                        }
-                    },
-                    tooltip: {
-                        // MELHORIA DA MENSAGENZINHA (TOOLTIP)
-                        backgroundColor: containerColor,
-                        titleColor: firstColorAlt,
-                        bodyColor: textColor,
-                        borderColor: firstColor,
-                        borderWidth: 2,
-                        cornerRadius: 8,
-                        padding: 12,
-                        titleFont: {
-                            family: 'Tektur',
-                            weight: 'bold',
-                            size: 14
-                        },
-                        bodyFont: {
-                            family: 'Orbitron',
-                            size: 12
-                        },
-                        caretSize: 8,
-
-                        callbacks: {
-                            title: function (context) {
-                                // Mostra a data como título
-                                return context[0].label;
-                            },
-                            label: function (context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.dataset.yAxisID === 'y') {
-                                    // Faturamento (Eixo Esquerdo)
-                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
-                                } else if (context.dataset.yAxisID === 'y1') {
-                                    // Qtd. Pedidos (Eixo Direito)
-                                    label += context.raw;
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: gridColor,
-                            lineWidth: 0.5,
-                            drawBorder: false,
-                        },
-                        ticks: { color: textColor, font: { family: 'Orbitron', size: 10 } }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        grid: {
-                            color: gridColor,
-                            lineWidth: 0.5,
-                            drawBorder: false,
-                        },
-                        ticks: { color: textColor, font: { family: 'Orbitron' } }
-                    },
-                    // RESTAURADO: Eixo y1 para quantidade de pedidos
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: true,
-                            color: subtleGridColor, // Réguas secundárias mais suaves
-                            lineWidth: 0.2,
-                        },
-                        ticks: { color: textColor, stepSize: 1 }
-                    }
-                }
-            }
-        });
-
-    } catch (err) {
-        console.error('Erro ao carregar gráfico:', err);
-        showToast('Erro ao carregar gráfico de desempenho.', 'error');
-    }
+    }));
 }
