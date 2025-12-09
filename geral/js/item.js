@@ -161,7 +161,65 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderRating(product);
     document.title = `${product.name} • Tech Nexus`;
-    document.getElementById('productImg').src = product.img || 'geral/img/placeholder.png';
+    const stage = document.getElementById('stage');
+    const imageModal = document.getElementById('image-modal-overlay');
+    const modalImg = document.getElementById('modal-image-content');
+
+    // Função de Zoom (Item 3)
+    function openZoom(src) {
+      modalImg.src = src;
+      imageModal.classList.add('show');
+    }
+
+    // Verifica Galeria (Item 2)
+    const hasGallery = product.gallery && product.gallery.length > 0;
+
+    if (hasGallery) {
+      // Adiciona a imagem principal à galeria para o carrossel
+      const allImages = [product.img, ...product.gallery];
+
+      stage.innerHTML = `
+      <div class="swiper productSwiper" style="width:100%; height:100%; border-radius:12px;">
+        <div class="swiper-wrapper">
+          ${allImages.map(img => `
+            <div class="swiper-slide">
+              <img src="${img}" class="zoomable-img" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in;">
+            </div>
+          `).join('')}
+        </div>
+        <div class="swiper-pagination"></div>
+        <div class="swiper-button-next" style="color:var(--first-color);"></div>
+        <div class="swiper-button-prev" style="color:var(--first-color);"></div>
+      </div>
+    `;
+
+      // Inicializa Swiper
+      new Swiper(".productSwiper", {
+        loop: true,
+        pagination: { el: ".swiper-pagination", clickable: true },
+        navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+      });
+
+    } else {
+      // Imagem Única
+      stage.innerHTML = `
+        <div class="product-img">
+            <img src="${product.img || 'geral/img/placeholder.png'}" class="zoomable-img" style="cursor:zoom-in;">
+        </div>
+    `;
+    }
+
+    // Listener para Zoom (funciona para Swiper ou Imagem única)
+    stage.addEventListener('click', (e) => {
+      if (e.target.classList.contains('zoomable-img')) {
+        openZoom(e.target.src);
+      }
+    });
+
+    // Fechar Modal de Zoom
+    const closeZoomBtn = document.getElementById('image-modal-close');
+    if (closeZoomBtn) closeZoomBtn.addEventListener('click', () => imageModal.classList.remove('show'));
+    if (imageModal) imageModal.addEventListener('click', (e) => { if (e.target === imageModal) imageModal.classList.remove('show'); });
     document.getElementById('brandMeta').textContent = product.brand_meta || 'Marca não informada';
     document.getElementById('sku').textContent = `SKU: ${product.sku || 'N/A'}`;
     document.getElementById('title').textContent = product.name;
@@ -173,15 +231,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('stock').textContent = `Estoque: ${stockCount}`;
 
     const buyBtn = document.getElementById('buyBtn');
-    
+
     if (buyBtn) {
       if (stockCount <= 0) {
-        buyBtn.textContent = 'Fora de Estoque'; 
-        buyBtn.disabled = true;                
-        buyBtn.style.background = 'var(--container-color)';   
-        buyBtn.style.color = 'var(--text-color)';            
-        buyBtn.style.cursor = 'not-allowed';    
-        buyBtn.style.border = '1px solid #999'; 
+        buyBtn.textContent = 'Fora de Estoque';
+        buyBtn.disabled = true;
+        buyBtn.style.background = 'var(--container-color)';
+        buyBtn.style.color = 'var(--text-color)';
+        buyBtn.style.cursor = 'not-allowed';
+        buyBtn.style.border = '1px solid #999';
       } else {
         buyBtn.addEventListener('click', () => cart.addToCart(product));
       }
@@ -420,7 +478,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const comment = decodeURIComponent(editBtn.dataset.comment || '');
           const imagesJSON = editBtn.dataset.images ? decodeURIComponent(editBtn.dataset.images) : '[]';
           let images = [];
-          try { images = JSON.parse(imagesJSON); } catch(_) { images = []; }
+          try { images = JSON.parse(imagesJSON); } catch (_) { images = []; }
 
           // Popula estado para edição
           currentEditingId = id;
