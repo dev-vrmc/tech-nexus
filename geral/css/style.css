@@ -3255,6 +3255,7 @@ label {
   font-size: var(--normal-font-size);
   margin-bottom: 1.5rem;
   color: var(--text-color);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* === Steps list === */
@@ -3267,11 +3268,16 @@ label {
 .step-item {
   background: var(--body-color);
   border-left: 4px solid var(--first-color);
+  font-family: Arial, Helvetica, sans-serif;
   padding: 1rem 1rem 1rem 1.2rem;
   margin-bottom: 1rem;
   border-radius: 8px;
   color: var(--text-color);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.section-text{
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .step-item:hover {
