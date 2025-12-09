@@ -93,7 +93,7 @@
   <div class="admin-dashboard-layout">
     <aside class="admin-sidebar">
       <div class="admin-sidebar-logo">
-        <img src="geral/img/logo/simbolo.png" alt="Tech Nexus" />
+        <img id="profile-photo" src="geral/img/logo/simbolo.png" alt="Tech Nexus" />
         <span>Painel Admin</span>
       </div>
       <nav class="admin-sidebar-nav">
@@ -135,43 +135,80 @@
     <main class="admin-content">
 
       <section id="admin-dashboard-stats-section" class="admin-section active">
-        <h1>📶 Dashboard</h1>
+        <h1>⚙️ Dashboard</h1>
+
         <div class="admin-stats-grid">
           <div class="stat-card">
             <h3>Faturamento Total</h3>
             <p id="stat-total-revenue">R$ 0,00</p>
-            <i class="ri-money-dollar-circle-line"></i>
+            <i class="ri-line-chart-line"></i>
           </div>
           <div class="stat-card">
             <h3>Total de Pedidos</h3>
             <p id="stat-total-orders">0</p>
-            <i class="ri-shopping-bag-3-line"></i>
+            <i class="ri-todo-line"></i>
           </div>
           <div class="stat-card">
             <h3>Total de Clientes</h3>
             <p id="stat-total-clients">0</p>
-            <i class="ri-user-3-line"></i>
+            <i class="ri-user-settings-line"></i>
           </div>
           <div class="stat-card">
             <h3>Produtos Cadastrados</h3>
             <p id="stat-total-products">0</p>
-            <i class="ri-database-2-line"></i>
+            <i class="ri-inbox-archive-line"></i>
           </div>
-        </div>
-        <div class="chart-wrapper">
-          <div class="chart-header">
-            <h2><i class="ri-pulse-line"></i> Performance Semanal</h2>
-            <span class="live-badge">AO VIVO</span>
-          </div>
-          <div class="chart-container-box">
-            <canvas id="revenueChart"></canvas>
-          </div>
-        </div>
-      </section>
 
-      <p class="chart-warning">
-        O gráfico analítico só está disponível para telas maiores que 500 pixels.
-      </p>
+          <div class="stat-card">
+            <h3>Faturamento (Mês)</h3>
+            <p id="stat-monthly-revenue">R$ 0,00</p>
+            <i class="ri-calendar-event-line"></i>
+          </div>
+          <div class="stat-card">
+            <h3>Faturamento (7 Dias)</h3>
+            <p id="stat-weekly-revenue">R$ 0,00</p>
+            <i class="ri-time-line"></i>
+          </div>
+          <div class="stat-card">
+            <h3>Pedidos (Mês)</h3>
+            <p id="stat-monthly-orders">0</p>
+            <i class="ri-list-check-2"></i>
+          </div>
+          <div class="stat-card">
+            <h3>Pedidos (Hoje)</h3>
+            <p id="stat-daily-orders">0</p>
+            <i class="ri-flashlight-line"></i>
+          </div>
+        </div>
+
+        <div class="charts-grid-container" style="display: grid; gap: 2rem; margin-top: 2rem;">
+
+          <div class="chart-wrapper">
+            <div class="chart-header">
+              <h2><i class="ri-pulse-line"></i> Performance Semanal (7 Dias)</h2>
+              <span class="live-badge">AO VIVO</span>
+            </div>
+            <div class="chart-container-box">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-wrapper">
+            <div class="chart-header">
+              <h2><i class="ri-bar-chart-grouped-line"></i> Performance Mensal (Por Semanas)</h2>
+              <span class="live-badge">AO VIVO</span>
+            </div>
+            <div class="chart-container-box">
+              <canvas id="monthlySalesChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <p class="chart-warning">
+          Os gráficos analíticos só estão disponíveis para telas maiores que 500 pixels.
+        </p>
+      </section>
 
       <section id="admin-orders-section" class="admin-section">
         <h1>📦 Pedidos</h1>
@@ -291,12 +328,9 @@
         <a href="index.html"><img src="geral/img/logo/logo.png" alt="Tech Nexus"
             class="footer__logo-img logo__dark"></a>
         <div class="footer__socials">
-          <a href="#"><i class="ri-facebook-fill"></i></a>
+          <a href="#"><i class="ri-github-fill"></i></a>
           <a href="#"><i class="ri-instagram-fill"></i></a>
-          <a href="#"><i class="ri-twitter-fill"></i></a>
-          <a href="#"><i class="ri-youtube-fill"></i></a>
-          <a href="#"><i class="ri-pinterest-fill"></i></a>
-          <a href="#"><i class="ri-discord-fill"></i></a>
+          <a href="#"><i class="ri-linkedin-fill"></i></a>
         </div>
       </div>
 
