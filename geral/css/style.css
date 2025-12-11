@@ -2363,6 +2363,7 @@ label {
 .delete-btn {
   background-color: #f44336;
   color: #fff;
+  border-radius: 5%;
 }
 .delete-btn:hover {
   background-color: #da190b;
