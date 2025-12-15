@@ -806,19 +806,31 @@ async function loadReviews() {
     const container = document.getElementById('adminReviewsContainer');
     if (!container) return;
 
+    // Busca reviews e ordena por status (não aprovados primeiro) e depois data
     const { data: reviews } = await supabase.from('reviews')
-        .select(`id, rating, comment, image_urls, created_at, profiles(full_name, avatar_url), products(name)`)
+        .select(`id, rating, comment, image_urls, created_at, approved, profiles(full_name, avatar_url), products(name)`)
+        .order('approved', { ascending: true }) // Pendentes primeiro
         .order('created_at', { ascending: false });
 
     if (!reviews?.length) { container.innerHTML = '<p>Sem avaliações.</p>'; return; }
 
-    container.innerHTML = reviews.map(r => `
-        <div class="admin-review-card">
+    container.innerHTML = reviews.map(r => {
+        const statusLabel = r.approved 
+            ? '<span style="color:green; font-weight:bold;">[Aprovado]</span>' 
+            : '<span style="color:orange; font-weight:bold;">[PENDENTE]</span>';
+        
+        const approveBtn = !r.approved 
+            ? `<button class="approve-review-btn" data-id="${r.id}" style="background:var(--first-color); margin-right:5px;">Aprovar</button>` 
+            : '';
+
+        return `
+        <div class="admin-review-card" style="${r.approved ? '' : 'border: 1px solid orange;'}">
             <div class="admin-review-header">
                 <img src="${r.profiles?.avatar_url || 'geral/img/logo/simbolo.png'}" class="review-avatar">
                 <div class="admin-review-info">
-                    <span class="review-author-name">${r.profiles?.full_name || 'Anônimo'}</span>
-                    <span class="review-product-name">${r.products?.name}</span>
+                    <span class="review-author-name">${r.profiles?.full_name || 'Anônimo'} ${statusLabel}</span>
+                    <a href="item.html?id=${r.products?.id}">
+                    <span class="review-product-name">${r.products?.name}</span></a>
                     <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
                 </div>
             </div>
@@ -828,11 +840,31 @@ async function loadReviews() {
             </div>
             <div class="admin-review-footer">
                 <span>${new Date(r.created_at).toLocaleDateString()}</span>
-                <button class="delete-btn delete-review-btn" data-id="${r.id}">Excluir</button>
+                <div style="display:flex; justify-content:center;">
+                    ${approveBtn}
+                    <button class="delete-btn delete-review-btn" data-id="${r.id}">Excluir</button>
+                </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 
+    // Listeners Aprovar
+    container.querySelectorAll('.approve-review-btn').forEach(b => b.addEventListener('click', async (e) => {
+        const id = e.target.dataset.id;
+        showLoader();
+        try {
+            const { error } = await supabase.from('reviews').update({ approved: true }).eq('id', id);
+            if (error) throw error;
+            showToast('Avaliação aprovada!', 'success');
+            await loadReviews();
+        } catch(err) {
+            showToast('Erro ao aprovar.', 'error');
+        } finally {
+            hideLoader();
+        }
+    }));
+
+    // Listeners Excluir
     container.querySelectorAll('.delete-review-btn').forEach(b => b.addEventListener('click', (e) => {
         showAdminConfirmModal('Excluir avaliação?', async () => {
             showLoader();
