@@ -4178,6 +4178,7 @@ label {
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
   transition: all 0.3s ease;
+  color: white;
 }
 
 #adminAddBanner {
@@ -4186,4 +4187,5 @@ label {
   gap: 12px;
   align-items: center;
   justify-content: center;
+
 }
