@@ -3704,6 +3704,7 @@ label {
   border: 1px solid var(--first-color);
   color: var(--first-color);
   padding: 0.5rem 1rem;
+  text-align: center;
 }
 
 .confirm-modal .button:hover {
@@ -4167,7 +4168,7 @@ label {
   transform: translateY(-2px);
 }
 
-#banner-product-search{
+#banner-product-search {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4176,11 +4177,10 @@ label {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
-  transition: all 0.3s ease; 
-
+  transition: all 0.3s ease;
 }
 
-#adminAddBanner{
+#adminAddBanner {
   display: flex;
   flex-direction: column;
   gap: 12px;
