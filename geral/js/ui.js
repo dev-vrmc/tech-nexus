@@ -1,5 +1,5 @@
 import { cart } from './cart.js';
-import { authManager } from './auth.js'; 
+import { authManager } from './auth.js';
 import { productManager } from './products.js';
 
 export function showToast(message, type = 'success') {
@@ -57,6 +57,25 @@ export async function renderProducts(products, containerId) {
             </div>
         `;
     }).join('');
+
+    container?.addEventListener('click', (e) => {
+        // aceitamos tanto admin-btn.edit quanto card-edit-btn (compatibilidade)
+        const editBtn = e.target.closest('.admin-btn.edit, .card-edit-btn');
+        if (editBtn && editBtn.dataset.id) {
+            e.stopPropagation();
+            // garante que o clique de edição faça o redirect com o id
+            const productId = editBtn.dataset.id;
+            // preferimos query param (mais explícito)
+            window.location.href = `admin.html?edit=${productId}`;
+            return;
+        }
+
+        // clique normal no card abre a página do produto
+        const card = e.target.closest('.product-card');
+        if (card && card.dataset.id) {
+            window.location.href = `item.html?id=${card.dataset.id}`;
+        }
+    });
 
     // NOVO: Adiciona event listeners para os botões de admin, se houver
     if (isAdmin) {

@@ -123,6 +123,12 @@
             </a>
           </li>
           <li>
+            <a href="#" class="admin-sidebar-link" data-target="#admin-banners-section">
+              <i class="ri-image-edit-line"></i>
+              <span>Banners</span>
+            </a>
+          </li>
+          <li>
             <a href="index.html" class="admin-sidebar-link">
               <i class="ri-arrow-go-back-line"></i>
               <span>Voltar ao Site</span>
@@ -225,9 +231,23 @@
             <label>Nome</label>
             <input type="text" name="name" placeholder="Oneplus 15" required>
 
-            <label>Imagem (URL)</label>
-            <input type="url" name="img" placeholder="https://i.postimg.cc/C1xr9z6t/Oneplus-15-design-Photoroom-1.png"
-              required>
+            <label>Imagem do Produto</label>
+            <div class="image-upload-wrapper" style="margin-bottom: 15px;">
+              <input type="file" id="product-file-input" accept="image/*" style="display: none;">
+
+              <button type="button" id="btn-select-image" class="button-secondary"
+                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="ri-upload-cloud-line"></i> Importar Imagem
+              </button>
+
+              <input type="hidden" name="img" id="product-image-url">
+
+              <div id="image-preview-container" style="margin-top: 10px; display: none; text-align: center;">
+                <img id="image-preview" src="" alt="Pré-visualização"
+                  style="max-height: 150px; border-radius: 8px; border: 2px solid var(--first-color);">
+                <p id="image-name" style="font-size: 0.8rem; color: #ccc; margin-top: 5px;"></p>
+              </div>
+            </div>
 
             <label>Preço (R$)</label>
             <input name="price" type="number" step="0.01" placeholder="1299990" required>
@@ -299,6 +319,47 @@
       <section id="admin-reviews-section" class="admin-section">
         <h1>⭐ Avaliações</h1>
         <div id="adminReviewsContainer">
+        </div>
+      </section>
+
+      <section id="admin-banners-section" class="admin-section">
+        <h1>🖼️ Gerenciar Banners</h1>
+
+        <div class="admin-product-form-container">
+          <h3>Novo Banner</h3>
+          <form id="adminAddBanner" class="admin__form">
+
+            <label>Imagem do Banner (Recomendado: 1920x600)</label>
+            <div class="image-upload-wrapper" style="margin-bottom: 15px;">
+              <input type="file" id="banner-file-input" accept="image/*" required style="display: none;">
+              <button type="button" id="btn-select-banner" class="button-secondary" style="width: 100%;">
+                <i class="ri-upload-cloud-line"></i> Escolher Imagem
+              </button>
+              <div id="banner-preview-container" style="margin-top: 10px; display: none;">
+                <img id="banner-preview" src="" style="max-height: 100px; border-radius: 8px;">
+              </div>
+            </div>
+
+            <label>Vincular a um Produto</label>
+            <div class="product-search-wrapper" style="position: relative;">
+              <input type="text" id="banner-product-search" placeholder="Digite o nome do produto..."
+                autocomplete="off">
+              <input type="hidden" name="product_id" id="banner-product-id" required>
+              <div id="product-search-results" class="dropdown-results"></div>
+            </div>
+            <p id="selected-product-display"
+              style="font-size: 0.9rem; color: var(--first-color); margin-top: 5px; display: none;">
+              Selecionado: <span id="selected-product-name" style="font-weight: bold;"></span>
+            </p>
+
+            <button type="submit" class="button" style="margin-top: 15px;">Adicionar Banner</button>
+          </form>
+        </div>
+
+        <div class="admin-product-list-container">
+          <h2>Banners Ativos</h2>
+          <div id="adminBannersList" class="admin__products">
+          </div>
         </div>
       </section>
     </main>

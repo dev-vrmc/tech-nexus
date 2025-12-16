@@ -13,6 +13,31 @@ let dashboardChartInstance = null;
 let monthlyChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // =======================================================
+    // LÓGICA DE PREVIEW DE IMAGEM
+    // =======================================================
+    const fileInput = document.getElementById('product-file-input');
+    const selectBtn = document.getElementById('btn-select-image');
+    const previewContainer = document.getElementById('image-preview-container');
+    const previewImg = document.getElementById('image-preview');
+    const imageName = document.getElementById('image-name');
+
+    if (selectBtn && fileInput) {
+        // Ao clicar no botão "Importar", clica no input file escondido
+        selectBtn.addEventListener('click', () => fileInput.click());
+
+        // Quando o arquivo muda
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Cria URL local para preview
+                const objectUrl = URL.createObjectURL(file);
+                previewImg.src = objectUrl;
+                imageName.textContent = `Arquivo: ${file.name}`;
+                previewContainer.style.display = 'block';
+            }
+        });
+    }
     showLoader();
     try {
         // Proteção da Rota
@@ -32,12 +57,78 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadMonthlyChart(),       // Gráfico 2: Semanal (Mensal)
             loadProducts(),
             loadOrders(),
+            loadBanners(),
             loadReviews()
         ]);
 
         setupSidebarNavigation();
+        setupBannerSystem();
         setupFormListeners();
         setupImageModal();
+
+        try {
+            const editParam = new URLSearchParams(window.location.search).get('edit');
+            if (editParam) {
+                // busca directo via productManager (mais confiável que depender do array carregado)
+                const prod = await productManager.getProductById(editParam);
+                if (prod) {
+                    // ativa a aba Produtos
+                    const productSection = document.getElementById('admin-products-section');
+                    const productLink = document.querySelector('a[data-target="#admin-products-section"]');
+                    const form = document.getElementById('adminAddProduct');
+                    if (productSection && form) {
+                        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+                        document.querySelectorAll('.admin-sidebar-link').forEach(l => l.classList.remove('active'));
+                        productSection.classList.add('active');
+                        if (productLink) productLink.classList.add('active');
+
+                        // preenche o formulário (mesma lógica usada no loadProducts)
+                        form.querySelector('input[name="id"]').value = prod.id || '';
+                        form.querySelector('input[name="name"]').value = prod.name || '';
+                        form.querySelector('input[name="price"]').value = prod.price || '';
+                        form.querySelector('input[name="brand_meta"]').value = prod.brand_meta || '';
+                        form.querySelector('textarea[name="description"]').value = prod.description || '';
+                        form.querySelector('input[name="installments"]').value = prod.installments || '';
+                        form.querySelector('input[name="stock"]').value = prod.stock || 0;
+
+                        const featuredCheck = form.querySelector('input[name="featured"]');
+                        if (featuredCheck) featuredCheck.checked = !!prod.featured;
+
+                        const catSelect = form.querySelector('select[name="category"]');
+                        if (catSelect && typeof categoryMapById !== 'undefined' && categoryMapById[prod.category_id]) {
+                            catSelect.value = categoryMapById[prod.category_id];
+                        }
+
+                        const imgHidden = document.getElementById('product-image-url');
+                        const previewContainer = document.getElementById('image-preview-container');
+                        const previewImg = document.getElementById('image-preview');
+                        const imgName = document.getElementById('image-name');
+                        const fileInput = document.getElementById('product-file-input');
+
+                        if (imgHidden) imgHidden.value = prod.img || '';
+                        if (previewImg) previewImg.src = prod.img || '';
+                        if (imgName) imgName.textContent = "Imagem atual (envie outra para alterar)";
+                        if (previewContainer) previewContainer.style.display = 'block';
+                        if (fileInput) fileInput.value = "";
+
+                        const title = document.getElementById('product-form-title');
+                        if (title) title.textContent = `✏️ Editando: ${prod.name}`;
+
+                        // pequena animação / foco
+                        setTimeout(() => {
+                            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const nameInput = form.querySelector('input[name="name"]');
+                            if (nameInput) nameInput.focus();
+                        }, 150);
+
+                        // opcional: limpa o param da url pra não re-executar se recarregar
+                        try { history.replaceState(null, '', 'admin.html'); } catch (err) { }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao carregar produto via URL ?edit=', err);
+        }
 
     } catch (authError) {
         showToast('Erro de autenticação.', 'error');
@@ -507,16 +598,57 @@ function setupSidebarNavigation() {
 
 function setupFormListeners() {
     const form = document.getElementById('adminAddProduct');
+    const fileInput = document.getElementById('product-file-input');
+
     if (!form) return;
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         showLoader();
+
         try {
             const formData = new FormData(form);
+            // Pega os dados básicos
             const productData = Object.fromEntries(formData.entries());
             const id = productData.id;
+            const file = fileInput.files[0];
 
+            // ---------------------------------------------------
+            // LÓGICA DE UPLOAD DE IMAGEM
+            // ---------------------------------------------------
+            let finalImageUrl = productData.img; // Começa com o valor do input hidden (útil para edição)
+
+            if (file) {
+                // 1. Limpa o nome do arquivo para evitar caracteres estranhos
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                // 2. Upload para o bucket 'products'
+                const { error: uploadError } = await supabase.storage
+                    .from('products')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                // 3. Obter URL Pública
+                const { data: publicUrlData } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(filePath);
+
+                finalImageUrl = publicUrlData.publicUrl;
+            }
+
+            // Se não tiver imagem nem nova nem antiga, impede salvar (opcional)
+            if (!finalImageUrl) {
+                throw new Error("A imagem do produto é obrigatória.");
+            }
+
+            // Atualiza o objeto para salvar no banco
+            productData.img = finalImageUrl;
+            // ---------------------------------------------------
+
+            // Tratamento dos outros dados
             productData.category_id = categoryMapBySlug[productData.category];
             delete productData.category;
             productData.price = parseFloat(productData.price);
@@ -534,12 +666,22 @@ function setupFormListeners() {
             }
 
             if (error) throw error;
+
             showToast('Produto salvo com sucesso!');
+
+            // Resetar formulário
             form.reset();
             form.querySelector('input[name="id"]').value = '';
+            document.getElementById('product-image-url').value = ''; // Limpa hidden
+            document.getElementById('product-file-input').value = ''; // Limpa file input
+            document.getElementById('image-preview-container').style.display = 'none'; // Esconde preview
+            document.getElementById('image-name').textContent = '';
             document.getElementById('product-form-title').textContent = '➕ Adicionar Novo Produto';
+
             await loadProducts();
+
         } catch (err) {
+            console.error(err);
             showToast(`Erro: ${err.message}`, 'error');
         } finally {
             hideLoader();
@@ -595,13 +737,26 @@ function showAdminConfirmModal(message, onConfirmCallback) {
 // CARREGADORES DE DADOS (PRODUTOS & ORDERS)
 // =======================================================
 
+/**
+ * Carrega a lista de produtos no painel de administração
+ * e configura os listeners de edição e exclusão.
+ */
 async function loadProducts() {
     const container = document.getElementById('adminProducts');
     if (!container) return;
+
+    // 1. Buscar produtos
     const products = await productManager.getProducts();
+
+    // 2. Renderizar a lista na seção 'Visualizar Produtos'
     container.innerHTML = products.map(p => `
         <div class="admin-product-item">
-            <span><a href="item.html?id=${p.id}" target="_blank" class="admin-link">${p.name}</a> (Estoque: ${p.stock})</span>
+            <span>
+                <a href="item.html?id=${p.id}" target="_blank" class="admin-link">
+                    ${p.name}
+                </a> 
+                (Estoque: ${p.stock})
+            </span>
             <div>
                 <button class="edit-btn" data-id="${p.id}">Editar</button>
                 <button class="delete-btn" data-id="${p.id}">Excluir</button>
@@ -609,35 +764,108 @@ async function loadProducts() {
         </div>
     `).join('');
 
-    container.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', (e) => {
-        const prod = products.find(p => p.id == e.target.dataset.id);
-        if (prod) {
-            const form = document.getElementById('adminAddProduct');
-            form.querySelector('input[name="id"]').value = prod.id;
-            form.querySelector('input[name="name"]').value = prod.name;
-            form.querySelector('input[name="img"]').value = prod.img;
-            form.querySelector('input[name="price"]').value = prod.price;
-            form.querySelector('input[name="brand_meta"]').value = prod.brand_meta || '';
-            form.querySelector('textarea[name="description"]').value = prod.description || '';
-            form.querySelector('input[name="installments"]').value = prod.installments || '';
-            form.querySelector('input[name="stock"]').value = prod.stock;
-            form.querySelector('input[name="featured"]').checked = prod.featured;
-            form.querySelector('select[name="category"]').value = categoryMapById[prod.category_id];
+    // 3. Configurar o Event Listener (Delegation)
+    container.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.edit-btn');
+        const deleteBtn = e.target.closest('.delete-btn');
 
-            document.getElementById('product-form-title').textContent = `✏️ Editando: ${prod.name}`;
-            form.scrollIntoView({ behavior: 'smooth' });
-            document.querySelector('[data-target="#admin-products-section"]').click();
+        // --- LÓGICA DE EDIÇÃO ---
+        if (editBtn) {
+            const id = editBtn.dataset.id;
+            const prod = products.find(p => p.id == id);
+
+            if (prod) {
+                // Seleciona os elementos de navegação
+                const productSection = document.getElementById('admin-products-section');
+                const productLink = document.querySelector('a[data-target="#admin-products-section"]');
+                const form = document.getElementById('adminAddProduct');
+
+                if (!productSection || !form) {
+                    console.error("Erro: Seção de produtos ou formulário não encontrado.");
+                    return;
+                }
+
+                // A) FORÇAR A NAVEGAÇÃO VISUAL
+                // ----------------------------------------------------
+                // Remove a classe 'active' de TODAS as seções (esconde o Dashboard)
+                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+                // Remove a classe 'active' de TODOS os links da sidebar
+                document.querySelectorAll('.admin-sidebar-link').forEach(l => l.classList.remove('active'));
+
+                // Ativa a seção de produtos (mostra o formulário)
+                productSection.classList.add('active');
+
+                // Ativa o link na sidebar (feedback visual)
+                if (productLink) {
+                    productLink.classList.add('active');
+                }
+                // ----------------------------------------------------
+
+                // B) POPULAR O FORMULÁRIO COM DADOS DO PRODUTO
+                // ----------------------------------------------------
+                form.querySelector('input[name="id"]').value = prod.id;
+                form.querySelector('input[name="name"]').value = prod.name;
+                form.querySelector('input[name="price"]').value = prod.price;
+                form.querySelector('input[name="brand_meta"]').value = prod.brand_meta || '';
+                form.querySelector('textarea[name="description"]').value = prod.description || '';
+                form.querySelector('input[name="installments"]').value = prod.installments || '';
+                form.querySelector('input[name="stock"]').value = prod.stock;
+
+                // Checkbox
+                const featuredCheck = form.querySelector('input[name="featured"]');
+                if (featuredCheck) featuredCheck.checked = prod.featured;
+
+                // Select Categoria (usando o mapa global)
+                const catSelect = form.querySelector('select[name="category"]');
+                if (catSelect && typeof categoryMapById !== 'undefined' && categoryMapById[prod.category_id]) {
+                    catSelect.value = categoryMapById[prod.category_id];
+                }
+
+                // Imagem
+                const imgHidden = document.getElementById('product-image-url');
+                const previewContainer = document.getElementById('image-preview-container');
+                const previewImg = document.getElementById('image-preview');
+                const imgName = document.getElementById('image-name');
+                const fileInput = document.getElementById('product-file-input');
+
+                if (imgHidden) imgHidden.value = prod.img;
+                if (previewImg) previewImg.src = prod.img;
+                if (imgName) imgName.textContent = "Imagem atual (envie outra para alterar)";
+                if (previewContainer) previewContainer.style.display = 'block';
+                if (fileInput) fileInput.value = "";
+
+                // Título e Foco
+                const title = document.getElementById('product-form-title');
+                if (title) title.textContent = `✏️ Editando: ${prod.name}`;
+
+                // C) SCROLL PARA O FORMULÁRIO (com delay para renderizar a troca de aba)
+                setTimeout(() => {
+                    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const nameInput = form.querySelector('input[name="name"]');
+                    if (nameInput) nameInput.focus();
+                }, 150); // Aumentado ligeiramente para garantir a transição
+                // ----------------------------------------------------
+            }
         }
-    }));
 
-    container.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => {
-        showAdminConfirmModal('Excluir produto?', async () => {
-            showLoader();
-            await supabase.from('products').delete().eq('id', e.target.dataset.id);
-            await loadProducts();
-            hideLoader();
-        });
-    }));
+        // --- LÓGICA DE EXCLUIR ---
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            showAdminConfirmModal('Excluir produto?', async () => {
+                showLoader();
+                try {
+                    await supabase.from('products').delete().eq('id', id);
+                    await loadProducts();
+                    showToast('Produto excluído!');
+                } catch (err) {
+                    console.error(err);
+                    showToast('Erro ao excluir.', 'error');
+                } finally {
+                    hideLoader();
+                }
+            });
+        }
+    });
 }
 
 // --- FUNÇÃO DE ORDERS COM SEU LAYOUT E FUNÇÕES FALTANTES ---
@@ -648,6 +876,7 @@ async function loadOrders() {
     if (!container) return;
 
     try {
+        // Seleciona pedidos e dados completos do perfil (endereço)
         const { data: orders, error } = await supabase
             .from('orders')
             .select(`
@@ -681,44 +910,48 @@ async function loadOrders() {
                 canceled: 'Pedido cancelado.'
             };
 
+            // Bloco de Endereço Formatado
             const addressHtml = order.profiles ? `
-                <div class="order-address">
-                    <strong>Endereço de Entrega:</strong>
-                    <p>
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; margin: 10px 0; border-left: 3px solid var(--first-color);">
+                    <h4 style="margin-bottom: 5px; color: var(--first-color-alt);"><i class="ri-map-pin-line"></i> Endereço de Entrega:</h4>
+                    <p style="font-size: 0.9rem; line-height: 1.4;">
                         ${order.profiles.address_street || 'Rua não informada'}, Nº ${order.profiles.address_number || 'S/N'}<br>
                         ${order.profiles.address_complement ? order.profiles.address_complement + '<br>' : ''}
-                        ${order.profiles.address_neighborhood || 'Bairro não informado'} - ${order.profiles.address_city || 'Cidade não informada'}/${order.profiles.address_state || 'UF'}<br>
-                        CEP: ${order.profiles.address_zipcode || 'CEP não informado'}
+                        ${order.profiles.address_neighborhood || 'Bairro -'} • ${order.profiles.address_city || 'Cidade'}/${order.profiles.address_state || 'UF'}<br>
+                        <strong>CEP:</strong> ${order.profiles.address_zipcode || '---'}
                     </p>
                 </div>
-                <br>
-            ` : '<p>Endereço não disponível.</p>';
+            ` : '<p style="color: orange;">Endereço não disponível no cadastro.</p>';
 
             return `
             <div class="admin-order">
                 <div class="order-header">
-                    <h2>Pedido Nº: ${order.id}</h2><br>
-                    <p><strong>Nome:</strong> ${order.profiles?.full_name || 'Usuário Removido'}</p><br>
+                    <h2>Pedido #${order.id.toString().slice(0, 8)}...</h2>
+                    <span class="order-date">${new Date(order.created_at).toLocaleDateString('pt-BR')}</span>
                 </div>
+                
+                <p><strong>Cliente:</strong> ${order.profiles?.full_name || 'Usuário Removido'}</p>
+                
                 ${addressHtml} 
+                
                 <div class="order-details">
-                    <strong>Itens do Pedido:</strong><br>
-                    <ul>
+                    <strong>Itens do Pedido:</strong>
+                    <ul style="margin-top: 5px; padding-left: 20px;">
                     ${order.order_items.map(item => `
                         <li>
-                            -- ${item.quantity}x <a href="item.html?id=${item.products?.id}" target="_blank" class="admin-link">${item.products?.name || 'Produto Removido'}</a> — 
-                            ${Number(item.unit_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            ${item.quantity}x <a href="item.html?id=${item.products?.id}" target="_blank" class="admin-link" style="color: var(--white-color); text-decoration: underline;">${item.products?.name || 'Produto Removido'}</a> 
+                            — <span style="color: var(--first-color);">${Number(item.unit_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                         </li>
                     `).join('')}
                     </ul>
                 </div>
-                <div class="order-footer">
-                    <p><strong>Total:</strong> ${Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p><br>
-                    <p><strong>Data:</strong> ${new Date(order.created_at).toLocaleDateString('pt-BR')}</p><br>
+
+                <div class="order-footer" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                    <p style="font-size: 1.1rem;"><strong>Total:</strong> ${Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                    <p class="order-status-text" style="margin: 10px 0;">Status: <strong>${statusMap[order.status]}</strong></p>
                 </div>
-                <p class="order-status-text">${statusMap[order.status]}</p>
+
                 <div class="order-actions">
-                    <label for="status-${order.id}" style="margin-top:5px"><strong>Alterar Status:</strong></label>
                     <select class="order-status-select" data-id="${order.id}">
                         <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pendente</option>
                         <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Enviado</option>
@@ -730,21 +963,16 @@ async function loadOrders() {
             </div>
         `}).join('');
 
-        // Adiciona Listeners para Mudança de Status
+        // Listeners (Mantidos iguais)
         container.querySelectorAll('.order-status-select').forEach(select => {
             select.addEventListener('change', async (e) => {
-                const orderId = e.target.dataset.id;
-                const newStatus = e.target.value;
-                await updateOrderStatus(orderId, newStatus);
-                await loadOrders(); // Recarrega para atualizar visual
+                await updateOrderStatus(e.target.dataset.id, e.target.value);
+                await loadOrders();
             });
         });
 
-        // Adiciona Listeners para Exclusão
         container.querySelectorAll('.delete-order-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                handleDeleteOrder(e.target.dataset.id);
-            });
+            btn.addEventListener('click', (e) => handleDeleteOrder(e.target.dataset.id));
         });
 
     } catch (error) {
@@ -806,49 +1034,60 @@ async function loadReviews() {
     const container = document.getElementById('adminReviewsContainer');
     if (!container) return;
 
-    // Busca reviews e ordena por status (não aprovados primeiro) e depois data
+    // Busca reviews
     const { data: reviews } = await supabase.from('reviews')
-        .select(`id, rating, comment, image_urls, created_at, approved, profiles(full_name, avatar_url), products(name)`)
+        .select(`id, rating, comment, image_urls, created_at, approved, profiles(full_name, avatar_url), products(id, name)`)
         .order('approved', { ascending: true }) // Pendentes primeiro
         .order('created_at', { ascending: false });
 
     if (!reviews?.length) { container.innerHTML = '<p>Sem avaliações.</p>'; return; }
 
     container.innerHTML = reviews.map(r => {
-        const statusLabel = r.approved 
-            ? '<span style="color:green; font-weight:bold;">[Aprovado]</span>' 
-            : '<span style="color:orange; font-weight:bold;">[PENDENTE]</span>';
-        
-        const approveBtn = !r.approved 
-            ? `<button class="approve-review-btn" data-id="${r.id}" style="background:var(--first-color); margin-right:5px;">Aprovar</button>` 
+        const statusLabel = r.approved
+            ? '<span style="color:#00e676; font-weight:bold; font-size:0.8rem;">[APROVADO]</span>'
+            : '<span style="color:#ff9100; font-weight:bold; font-size:0.8rem;">[PENDENTE]</span>';
+
+        const approveBtn = !r.approved
+            ? `<button class="approve-review-btn" data-id="${r.id}" style="padding: 5px 10px; font-size: 0.9rem; margin-right:5px;">Aprovar</button>`
             : '';
 
+        // Cria o link para o produto
+        const productLink = r.products ? `item.html?id=${r.products.id}` : '#';
+        const productName = r.products ? r.products.name : 'Produto Desconhecido';
+
         return `
-        <div class="admin-review-card" style="${r.approved ? '' : 'border: 1px solid orange;'}">
+        <div class="admin-review-card" style="position: relative; ${r.approved ? '' : 'border: 1px solid #ff9100; box-shadow: 0 0 10px rgba(255, 145, 0, 0.1);'}">
+            
             <div class="admin-review-header">
                 <img src="${r.profiles?.avatar_url || 'geral/img/logo/simbolo.png'}" class="review-avatar">
                 <div class="admin-review-info">
                     <span class="review-author-name">${r.profiles?.full_name || 'Anônimo'} ${statusLabel}</span>
-                    <a href="item.html?id=${r.products?.id}">
-                    <span class="review-product-name">${r.products?.name}</span></a>
-                    <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+                    
+                    <a href="${productLink}" target="_blank" class="admin-product-link" style="color: var(--first-color); font-weight: bold; text-decoration: none; display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+                        ${productName} <i class="ri-external-link-line"></i>
+                    </a>
+
+                    <div class="stars" style="color: gold; margin-top: 2px;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
                 </div>
             </div>
-            <p class="admin-review-comment">${r.comment || ''}</p>
+
+            <p class="admin-review-comment" style="margin: 10px 0; color: #ddd;">${r.comment || 'Sem comentário por escrito.'}</p>
+            
             <div class="admin-review-images">
-                ${(r.image_urls || []).map(u => `<img src="${u}" class="admin-review-image">`).join('')}
+                ${(r.image_urls || []).map(u => `<img src="${u}" class="admin-review-image" style="cursor: zoom-in;">`).join('')}
             </div>
-            <div class="admin-review-footer">
-                <span>${new Date(r.created_at).toLocaleDateString()}</span>
-                <div style="display:flex; justify-content:center;">
+
+            <div class="admin-review-footer" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; opacity: 0.7;">${new Date(r.created_at).toLocaleDateString()}</span>
+                <div style="display:flex;">
                     ${approveBtn}
-                    <button class="delete-btn delete-review-btn" data-id="${r.id}">Excluir</button>
+                    <button class="delete-btn delete-review-btn" data-id="${r.id}" style="padding: 5px 10px; font-size: 0.9rem;">Excluir</button>
                 </div>
             </div>
         </div>
     `}).join('');
 
-    // Listeners Aprovar
+    // Reaplicar Listeners (Aprovar e Excluir)
     container.querySelectorAll('.approve-review-btn').forEach(b => b.addEventListener('click', async (e) => {
         const id = e.target.dataset.id;
         showLoader();
@@ -857,14 +1096,13 @@ async function loadReviews() {
             if (error) throw error;
             showToast('Avaliação aprovada!', 'success');
             await loadReviews();
-        } catch(err) {
+        } catch (err) {
             showToast('Erro ao aprovar.', 'error');
         } finally {
             hideLoader();
         }
     }));
 
-    // Listeners Excluir
     container.querySelectorAll('.delete-review-btn').forEach(b => b.addEventListener('click', (e) => {
         showAdminConfirmModal('Excluir avaliação?', async () => {
             showLoader();
@@ -873,4 +1111,191 @@ async function loadReviews() {
             hideLoader();
         });
     }));
+}
+
+// =======================================================
+// SISTEMA DE BANNERS
+// =======================================================
+
+function setupBannerSystem() {
+    setupBannerImagePreview();
+    setupProductSearchForBanner();
+    setupBannerFormSubmit();
+}
+
+// 1. Preview da Imagem do Banner
+function setupBannerImagePreview() {
+    const fileInput = document.getElementById('banner-file-input');
+    const btn = document.getElementById('btn-select-banner');
+    const previewContainer = document.getElementById('banner-preview-container');
+    const previewImg = document.getElementById('banner-preview');
+
+    if (btn && fileInput) {
+        btn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                previewImg.src = URL.createObjectURL(file);
+                previewContainer.style.display = 'block';
+                btn.textContent = `Arquivo: ${file.name}`;
+            }
+        });
+    }
+}
+
+// 2. Busca de Produto (Autocomplete)
+function setupProductSearchForBanner() {
+    const input = document.getElementById('banner-product-search');
+    const resultsBox = document.getElementById('product-search-results');
+    const hiddenId = document.getElementById('banner-product-id');
+    const displaySelected = document.getElementById('selected-product-display');
+    const nameSelected = document.getElementById('selected-product-name');
+
+    if (!input) return;
+
+    input.addEventListener('input', async (e) => {
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            resultsBox.innerHTML = '';
+            return;
+        }
+
+        const { data: products } = await supabase
+            .from('products')
+            .select('id, name, price')
+            .ilike('name', `%${query}%`)
+            .limit(5);
+
+        if (products && products.length > 0) {
+            resultsBox.innerHTML = products.map(p => `
+                <div class="search-result-item" data-id="${p.id}" data-name="${p.name}" 
+                     style="padding: 10px; background: #2d2d44; border-bottom: 1px solid #444; cursor: pointer;">
+                    <strong>${p.name}</strong> - R$ ${p.price}
+                </div>
+            `).join('');
+            resultsBox.style.display = 'block';
+        } else {
+            resultsBox.style.display = 'none';
+        }
+    });
+
+    // Clique no resultado
+    resultsBox.addEventListener('click', (e) => {
+        const item = e.target.closest('.search-result-item');
+        if (item) {
+            hiddenId.value = item.dataset.id;
+            nameSelected.textContent = item.dataset.name;
+            displaySelected.style.display = 'block';
+            resultsBox.style.display = 'none';
+            input.value = ''; // Limpa a busca
+        }
+    });
+}
+
+// 3. Salvar Banner
+function setupBannerFormSubmit() {
+    const form = document.getElementById('adminAddBanner');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+
+        try {
+            const fileInput = document.getElementById('banner-file-input');
+            const productId = document.getElementById('banner-product-id').value;
+            const file = fileInput.files[0];
+
+            if (!file) throw new Error("Selecione uma imagem.");
+            if (!productId) throw new Error("Selecione um produto.");
+
+            // Upload Imagem
+            const fileName = `banner-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+            const { error: uploadError } = await supabase.storage
+                .from('banners')
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrl } = supabase.storage
+                .from('banners')
+                .getPublicUrl(fileName);
+
+            // Salvar no Banco
+            const { error: dbError } = await supabase.from('banners').insert([{
+                image_url: publicUrl.publicUrl,
+                product_id: productId
+            }]);
+
+            if (dbError) throw dbError;
+
+            showToast('Banner adicionado com sucesso!');
+            form.reset();
+            document.getElementById('banner-preview-container').style.display = 'none';
+            document.getElementById('selected-product-display').style.display = 'none';
+            document.getElementById('btn-select-banner').innerHTML = '<i class="ri-upload-cloud-line"></i> Escolher Imagem';
+
+            await loadBanners();
+
+        } catch (err) {
+            console.error(err);
+            showToast(err.message, 'error');
+        } finally {
+            hideLoader();
+        }
+    });
+}
+
+// 4. Carregar Lista de Banners
+async function loadBanners() {
+    const container = document.getElementById('adminBannersList');
+    if (!container) return;
+
+    const { data: banners, error } = await supabase
+        .from('banners')
+        .select('id, image_url, created_at, products(name)')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (banners.length === 0) {
+        container.innerHTML = '<p>Nenhum banner cadastrado.</p>';
+        return;
+    }
+
+    container.innerHTML = banners.map(b => `
+        <div class="admin-product-item" style="align-items: center;">
+            <img src="${b.image_url}" style="width: 100px; height: 40px; object-fit: cover; border-radius: 4px;">
+            <div style="flex: 1; margin-left: 15px;">
+                <strong>Produto:</strong> ${b.products?.name || 'Produto Deletado'}
+            </div>
+            <button class="delete-btn delete-banner-btn" data-id="${b.id}" style="padding: 5px 10px;">
+                <i class="ri-delete-bin-line"></i>
+            </button>
+        </div>
+    `).join('');
+
+    // Listener de Exclusão
+    container.querySelectorAll('.delete-banner-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => deleteBanner(e.target.closest('button').dataset.id));
+    });
+}
+
+async function deleteBanner(id) {
+    showAdminConfirmModal('Excluir este banner?', async () => {
+        showLoader();
+        try {
+            await supabase.from('banners').delete().eq('id', id);
+            await loadBanners();
+            showToast('Banner removido.');
+        } catch (err) {
+            console.error(err);
+            showToast('Erro ao excluir.', 'error');
+        } finally {
+            hideLoader();
+        }
+    });
 }

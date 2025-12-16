@@ -101,19 +101,7 @@
   <main class="main">
     <section class="home__index">
       <div class="swiper mySwiper">
-        <div class="swiper-wrapper">
-          <div class="swiper-slide">
-            <a href="https://dev-vrmc.github.io/tech-nexus/item.html?id=13"><img src="geral/img/banner-3.png"
-                alt=""></img></a>
-          </div>
-          <div class="swiper-slide">
-            <a href="https://dev-vrmc.github.io/tech-nexus/item.html?id=111"><img src="geral/img/banner-2.png"
-                alt=""></img></a>
-          </div>
-          <div class="swiper-slide">
-            <a href="https://dev-vrmc.github.io/tech-nexus/item.html?id=84"><img src="geral/img/banner-1.png"
-                alt=""></img></a>
-          </div>
+        <div class="swiper-wrapper" id="home-swiper-wrapper">
         </div>
         <div class="swiper-pagination"></div>
         <div class="autoplay-progress">
@@ -308,6 +296,39 @@
         }
       });
     });
+  </script>
+  <script type="module">
+ import { supabase } from './geral/js/supabase.js';
+
+  async function loadHomeBanners() {
+    const wrapper = document.getElementById('home-swiper-wrapper');
+    if (!wrapper) return;
+
+    const { data: banners, error } = await supabase
+      .from('banners')
+      .select('image_url, product_id')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Erro ao carregar banners:", error);
+        return;
+    }
+
+    if (banners && banners.length > 0) {
+      wrapper.innerHTML = banners.map(b => `
+          <div class="swiper-slide">
+              <a href="item.html?id=${b.product_id}">
+                  <img src="${b.image_url}" alt="Banner Promocional" style="width: 100%; height: 100%; object-fit: cover;">
+              </a>
+          </div>
+      `).join('');
+      
+      // Se o Swiper não rodar automaticamente, pode ser necessário reiniciar a instância aqui
+      // Se estiver usando autoplay, ele deve pegar as novas divs automaticamente se for recarregado.
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadHomeBanners);
   </script>
 </body>
 

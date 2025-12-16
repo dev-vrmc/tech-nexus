@@ -169,25 +169,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             .order('created_at', { ascending: false });
 
         if (error) {
-            ordersContainer.innerHTML = '<p>Não foi possível carregar os pedidos.</p>';
+            ordersContainer.innerHTML = '<p>Erro ao carregar pedidos.</p>';
         } else if (!orders.length) {
-            ordersContainer.innerHTML = '<p>Você ainda não fez nenhum pedido.</p>';
+            ordersContainer.innerHTML = '<p>Você ainda não fez pedidos.</p>';
         } else {
             const statusTranslations = { pending: 'Pendente', shipped: 'Enviado', completed: 'Concluído', canceled: 'Cancelado' };
-            ordersContainer.innerHTML = orders.map(order => `
+            
+            ordersContainer.innerHTML = orders.map(order => {
+                const isCompleted = order.status === 'completed';
+                
+                return `
                 <div class="order-history-item">
                     <h2>Pedido #${order.id} - ${new Date(order.created_at).toLocaleDateString()}</h2>
                     <p>Status: <span class="order-status--${order.status}">${statusTranslations[order.status] || order.status}</span></p>
                     <p>Total: ${Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     <ul>
-                    ${order.order_items.map(item => `
+                    ${order.order_items.map(item => {
+                        // Botão de avaliar só aparece se pedido concluído
+                        const reviewBtn = isCompleted 
+                            ? `<a href="item.html?id=${item.products?.id}" class="review-order-btn" style="margin-left:10px; font-size:0.8rem; text-decoration:underline; color:var(--first-color);">Avaliar Produto</a>` 
+                            : '';
                         
-                        <li>• ${item.quantity}x <a href="item.html?id=${item.products?.id}" class="order-history-link">${item.products?.name || 'Produto Removido'}</a></li>
-
-                    `).join('')}
+                        return `<li>• ${item.quantity}x <a href="item.html?id=${item.products?.id}" class="order-history-link">${item.products?.name || 'Produto Removido'}</a> ${reviewBtn}</li>`;
+                    }).join('')}
                     </ul>
                 </div>
-            `).join('');
+            `}).join('');
         }
     }
 
